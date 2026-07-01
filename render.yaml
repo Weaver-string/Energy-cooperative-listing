@@ -1,6 +1,6 @@
 ﻿services:
   - type: web
-    name: energy-table
+    name: energy-agora
     runtime: node
     plan: free
     region: frankfurt
@@ -24,5 +24,6 @@
         sync: false
       - key: RESEND_FROM
         sync: false
+
 
 

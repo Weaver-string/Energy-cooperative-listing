@@ -15,7 +15,7 @@ const ADMIN_EMAIL = process.env.ADMIN_VERIFICATION_EMAIL || "keyse00ali@gmail.co
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-const RESEND_FROM = process.env.RESEND_FROM || "The Energy Table <onboarding@resend.dev>";
+const RESEND_FROM = process.env.RESEND_FROM || "Energy Agora <onboarding@resend.dev>";
 const DATABASE_URL = process.env.DATABASE_URL || "";
 const USE_DATABASE = Boolean(DATABASE_URL);
 let dbPool = null;
@@ -99,7 +99,7 @@ startServer();
 async function startServer() {
   await ensureStorage();
   server.listen(PORT, () => {
-    console.log(`The Energy Table server running at ${PUBLIC_BASE_URL}`);
+    console.log(`Energy Agora server running at ${PUBLIC_BASE_URL}`);
     console.log(`Admin verification email: ${ADMIN_EMAIL}`);
     console.log(`Storage: ${USE_DATABASE ? "Postgres DATABASE_URL" : DATA_DIR}`);
     if (!RESEND_API_KEY) {
@@ -257,9 +257,9 @@ async function createListingRequest(account) {
 
 async function notifyAdmin(request) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
-  const subject = `New listing request for The Energy Table: ${request.orgName}`;
+  const subject = `New Energy Agora listing request: ${request.orgName}`;
   const text = [
-    "A cooperative has requested listing access on The Energy Table.",
+    "A cooperative has requested listing access on Energy Agora.",
     "",
     `Cooperative: ${request.orgName}`,
     `Country: ${request.country}`,
@@ -325,9 +325,9 @@ async function getOpenListingRequest(account) {
 
 async function notifyProfileSubmitted(request, profile) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
-  const subject = `The Energy Table profile ready for review: ${profile.name}`;
+  const subject = `Energy Agora profile ready for review: ${profile.name}`;
   const text = [
-    "A cooperative profile draft has been submitted on The Energy Table.",
+    "A cooperative profile draft has been submitted on Energy Agora.",
     "",
     `Cooperative: ${profile.name}`,
     `Country: ${profile.country}`,
@@ -449,7 +449,7 @@ async function ensureStorage() {
 
   const pool = getPool();
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS energy_table_store (
+    CREATE TABLE IF NOT EXISTS energy_agora_store (
       collection TEXT NOT NULL,
       id TEXT NOT NULL,
       data JSONB NOT NULL,
@@ -471,7 +471,7 @@ async function readRecords(collection) {
   if (!USE_DATABASE) return readJson(COLLECTION_FILES[collection]);
 
   const result = await getPool().query(
-    "SELECT data FROM energy_table_store WHERE collection = $1 ORDER BY updated_at DESC",
+    "SELECT data FROM energy_agora_store WHERE collection = $1 ORDER BY updated_at DESC",
     [collection],
   );
   return result.rows.map((row) => row.data);
@@ -487,10 +487,10 @@ async function writeRecords(collection, values) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("DELETE FROM energy_table_store WHERE collection = $1", [collection]);
+    await client.query("DELETE FROM energy_agora_store WHERE collection = $1", [collection]);
     for (const value of values) {
       await client.query(
-        "INSERT INTO energy_table_store (collection, id, data, updated_at) VALUES ($1, $2, $3, NOW())",
+        "INSERT INTO energy_agora_store (collection, id, data, updated_at) VALUES ($1, $2, $3, NOW())",
         [collection, value.id, value],
       );
     }
@@ -602,7 +602,7 @@ function makeProfileId(value, profiles) {
 
 function getInitials(value) {
   const words = cleanText(value).split(/\s+/).filter(Boolean);
-  return (words[0]?.[0] || "E").concat(words[1]?.[0] || "T").toUpperCase();
+  return (words[0]?.[0] || "E").concat(words[1]?.[0] || "A").toUpperCase();
 }
 
 function toNumber(value) {
@@ -629,5 +629,6 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 
 
