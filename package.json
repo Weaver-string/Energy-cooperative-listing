@@ -1,5 +1,5 @@
-{
-  "name": "coopgrid-europe",
+﻿{
+  "name": "energy-agora",
   "version": "1.0.0",
   "private": true,
   "engines": {
@@ -13,3 +13,4 @@
     "check": "node --check server.js && node --check app.js"
   }
 }
+

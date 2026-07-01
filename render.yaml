@@ -1,6 +1,6 @@
-services:
+﻿services:
   - type: web
-    name: coopgrid-europe
+    name: energy-agora
     runtime: node
     plan: free
     region: frankfurt
@@ -24,3 +24,4 @@ services:
         sync: false
       - key: RESEND_FROM
         sync: false
+
