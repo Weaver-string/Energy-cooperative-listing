@@ -62,7 +62,7 @@ const EUROPEAN_COUNTRIES = [
 
 const formatNumber = new Intl.NumberFormat("en-GB");
 const AuthProvider = {
-  sessionKey: "energy-agora.session.account",
+  sessionKey: "energy-table.session.account",
 
   getSession() {
     return JSON.parse(localStorage.getItem(this.sessionKey) || "null");
@@ -609,7 +609,7 @@ function makeId(value) {
 
 function getInitials(value) {
   const words = value.trim().split(/\s+/).filter(Boolean);
-  return (words[0]?.[0] || "E").concat(words[1]?.[0] || "A").toUpperCase();
+  return (words[0]?.[0] || "E").concat(words[1]?.[0] || "T").toUpperCase();
 }
 
 function toNumber(value) {
@@ -631,4 +631,5 @@ function escapeHtml(value) {
 }
 
 init();
+
 

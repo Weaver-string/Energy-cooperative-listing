@@ -1,5 +1,5 @@
 ﻿{
-  "name": "energy-agora",
+  "name": "energy-table",
   "version": "1.0.0",
   "private": true,
   "engines": {
@@ -13,4 +13,5 @@
     "check": "node --check server.js && node --check app.js"
   }
 }
+
 

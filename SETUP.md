@@ -1,4 +1,4 @@
-﻿# Energy Agora Setup
+﻿# The Energy Table Setup
 
 ## Run Locally
 
@@ -26,7 +26,7 @@ Recommended free stack:
 
 1. Push this folder to a GitHub repository.
 2. In Render, create a new Blueprint from that repository.
-3. Render will read `render.yaml` and create the `energy-agora` web service.
+3. Render will read `render.yaml` and create the `energy-table` web service.
 4. Set these environment variables in Render:
 
 ```text
@@ -34,7 +34,7 @@ PUBLIC_BASE_URL=https://your-render-url.onrender.com
 DATABASE_URL=postgresql://...
 DATABASE_SSL=true
 RESEND_API_KEY=your_resend_api_key
-RESEND_FROM=Energy Agora <verified-sender@yourdomain.com>
+RESEND_FROM=The Energy Table <verified-sender@yourdomain.com>
 ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
 ADMIN_TOKEN=long_random_admin_secret
 ```
@@ -62,4 +62,5 @@ POST /api/profiles
 GET  /api/listing-requests?adminToken=...
 GET  /api/listing-requests/:id/approve?token=...
 ```
+
 
