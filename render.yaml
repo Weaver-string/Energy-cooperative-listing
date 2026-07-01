@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: coopgrid-europe
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_VERIFICATION_EMAIL
+        value: keyse00ali@gmail.com
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false

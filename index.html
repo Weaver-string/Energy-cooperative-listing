@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CoopGrid Europe</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button class="brand" id="home-button" type="button" aria-label="Go to browse page">
+        <span class="brand__mark">CG</span>
+        <span>CoopGrid</span>
+      </button>
+
+      <label class="global-search" for="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3m1.3-5.2a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
+        <input id="search" type="search" placeholder="Search cooperatives, assets, cities" autocomplete="off" />
+      </label>
+
+      <div class="topbar__actions">
+        <button class="button button--light" id="login-button" type="button">Log in</button>
+        <button class="button button--dark" id="create-button" type="button">List a co-op</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="browse-view" id="browse-view" aria-labelledby="browse-title">
+        <section class="browse-hero">
+          <div class="browse-hero__copy">
+            <p class="eyebrow">Member-owned energy</p>
+            <h1 id="browse-title">Find a co-op you'd actually join.</h1>
+            <p>
+              See what it costs to join, what electricity might cost, and what members get back.
+            </p>
+          </div>
+          <img src="assets/network-illustration.png" alt="Illustration of connected renewable energy cooperative profiles" />
+        </section>
+
+        <section class="browse-controls" aria-label="Browse filters">
+          <div class="chip-group" id="country-filter" aria-label="Country filters"></div>
+          <select id="asset-filter" aria-label="Filter by asset type">
+            <option value="all">All assets</option>
+            <option value="solar">Solar</option>
+            <option value="wind">Wind</option>
+            <option value="storage">Storage</option>
+            <option value="district heat">District heat</option>
+          </select>
+          <label class="toggle">
+            <input id="members-filter" type="checkbox" />
+            <span>Open to members</span>
+          </label>
+          <select id="sort-filter" aria-label="Sort profiles">
+            <option value="match">Best match</option>
+            <option value="capacity">Largest capacity</option>
+            <option value="members">Members</option>
+          </select>
+        </section>
+
+        <div class="list-heading">
+          <h2>Cooperatives</h2>
+          <span id="result-count">0 results</span>
+        </div>
+        <section class="profile-list" id="profile-list" aria-label="Cooperative list"></section>
+      </section>
+
+      <section class="detail-view is-hidden" id="detail-view" aria-label="Cooperative profile page">
+        <button class="back-button" id="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          Browse all co-ops
+        </button>
+
+        <div class="detail-layout">
+          <article class="profile-page" id="profile-page" aria-live="polite"></article>
+
+          <aside class="side-list" aria-label="More cooperatives">
+            <div class="side-list__header">
+              <h2>More co-ops</h2>
+              <span id="side-count">0</span>
+            </div>
+            <div id="compact-list"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="auth-view is-hidden" id="auth-view" aria-labelledby="auth-title">
+        <div class="auth-layout">
+          <form class="profile-form auth-form" id="auth-form">
+            <div class="form-heading">
+              <button class="back-button" id="auth-back-button" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                Back to browse
+              </button>
+              <p class="eyebrow">Co-op account</p>
+              <h1 id="auth-title">Request listing access.</h1>
+              <p>Sign up with any email. Your profile can be drafted immediately, and our team will manually verify whether the email is associated with the cooperative before marking it verified.</p>
+            </div>
+
+            <section class="form-section">
+              <h2>Account details</h2>
+              <div class="field-grid">
+                <label>
+                  <span>Email</span>
+                  <input id="auth-email" name="email" type="email" placeholder="you@example.com" required />
+                </label>
+                <label>
+                  <span>Password</span>
+                  <input id="auth-password" name="password" type="password" placeholder="Minimum 8 characters" minlength="8" required />
+                </label>
+                <label>
+                  <span>Organization name</span>
+                  <input id="auth-org-name" name="orgName" type="text" placeholder="River Solar Cooperative" required />
+                </label>
+                <label>
+                  <span>Country</span>
+                  <input id="auth-country" name="country" type="text" list="country-options" placeholder="Netherlands" required />
+                </label>
+              </div>
+            </section>
+
+            <section class="form-section">
+              <h2>Manual verification</h2>
+              <p class="form-note">After the profile is submitted, we review the cooperative name, email, public website or records, and any follow-up correspondence. Until then, the profile is labeled pending verification.</p>
+              <p class="form-note">A listing-access request email is sent to the CoopGrid review inbox so an admin can verify who they are.</p>
+              <div class="verification-steps" aria-label="Verification steps">
+                <div><strong>1</strong><span>Account request</span></div>
+                <div><strong>2</strong><span>Profile draft</span></div>
+                <div><strong>3</strong><span>Manual review</span></div>
+              </div>
+            </section>
+
+            <div class="form-actions">
+              <button class="button button--dark" type="submit">Continue</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="create-view is-hidden" id="create-view" aria-labelledby="create-title">
+        <div class="create-layout">
+          <form class="profile-form" id="profile-form">
+            <div class="form-heading">
+              <button class="back-button" id="create-back-button" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                Back to browse
+              </button>
+              <p class="eyebrow">Create profile</p>
+              <h1 id="create-title">Set up your co-op profile.</h1>
+              <p>Start with the same public signals people expect from a social profile: identity, place, bio, and member costs.</p>
+            </div>
+
+            <section class="form-section">
+              <h2>Profile basics</h2>
+              <label class="upload-field">
+                <span>Profile picture</span>
+                <input id="new-photo" name="photo" type="file" accept="image/*" />
+                <span class="upload-control">
+                  <span class="upload-avatar" id="upload-avatar">CG</span>
+                  <span>
+                    <strong>Upload logo or photo</strong>
+                    <small>Square images work best.</small>
+                  </span>
+                </span>
+              </label>
+              <div class="field-grid">
+                <label>
+                  <span>Co-op name</span>
+                  <input id="new-name" name="name" type="text" placeholder="River Solar Cooperative" required />
+                </label>
+                <label>
+                  <span>City</span>
+                  <input id="new-city" name="city" type="text" placeholder="Rotterdam" required />
+                </label>
+                <label>
+                  <span>Country</span>
+                  <input id="new-country" name="country" type="text" list="country-options" placeholder="Netherlands" required />
+                </label>
+                <label>
+                  <span>Public status</span>
+                  <select id="new-status" name="status">
+                    <option>Open membership</option>
+                    <option>Recruiting members</option>
+                    <option>Project pipeline</option>
+                    <option>Operational</option>
+                    <option>Pre-construction</option>
+                  </select>
+                </label>
+              </div>
+              <datalist id="country-options"></datalist>
+            </section>
+
+            <section class="form-section">
+              <h2>Bio</h2>
+              <label>
+                <span>Short profile bio</span>
+                <textarea id="new-intro" name="intro" rows="4" placeholder="What should someone know before deciding whether to join?"></textarea>
+              </label>
+            </section>
+
+            <section class="form-section">
+              <h2>Membership details</h2>
+              <div class="field-grid">
+                <label>
+                  <span>Members</span>
+                  <input id="new-members" name="members" type="number" min="0" step="1" placeholder="750" />
+                </label>
+                <label>
+                  <span>Owned capacity (MW)</span>
+                  <input id="new-capacity" name="capacity" type="number" min="0" step="0.1" placeholder="6.5" />
+                </label>
+                <label class="checkbox-field">
+                  <input id="new-open-members" name="openMembers" type="checkbox" checked />
+                  <span>Open to new members</span>
+                </label>
+                <label>
+                  <span>Cost to become a member</span>
+                  <input id="new-member-cost" name="memberCost" type="text" placeholder="EUR 100 share" />
+                </label>
+                <label>
+                  <span>Member electricity cost</span>
+                  <input id="new-electricity-cost" name="electricityCost" type="text" placeholder="EUR 0.18 / kWh" />
+                </label>
+              </div>
+            </section>
+
+            <section class="form-section">
+              <h2>Profile color</h2>
+              <div class="swatches" aria-label="Profile color">
+                <label><input type="radio" name="color" value="#0e765d" checked /><span style="background:#0e765d"></span></label>
+                <label><input type="radio" name="color" value="#2666e8" /><span style="background:#2666e8"></span></label>
+                <label><input type="radio" name="color" value="#bd7d19" /><span style="background:#bd7d19"></span></label>
+                <label><input type="radio" name="color" value="#d85668" /><span style="background:#d85668"></span></label>
+                <label><input type="radio" name="color" value="#7c3aed" /><span style="background:#7c3aed"></span></label>
+                <label><input type="radio" name="color" value="#0891b2" /><span style="background:#0891b2"></span></label>
+                <label><input type="radio" name="color" value="#16a34a" /><span style="background:#16a34a"></span></label>
+                <label><input type="radio" name="color" value="#dc2626" /><span style="background:#dc2626"></span></label>
+                <label><input type="radio" name="color" value="#9333ea" /><span style="background:#9333ea"></span></label>
+                <label><input type="radio" name="color" value="#f97316" /><span style="background:#f97316"></span></label>
+                <label><input type="radio" name="color" value="#0f172a" /><span style="background:#0f172a"></span></label>
+                <label><input type="radio" name="color" value="#be185d" /><span style="background:#be185d"></span></label>
+              </div>
+            </section>
+
+            <div class="form-actions">
+              <button class="button button--light" id="reset-profile-button" type="button">Reset</button>
+              <button class="button button--dark" type="submit">Submit for review</button>
+            </div>
+          </form>
+
+          <section class="profile-form submission-confirmation is-hidden" id="submission-confirmation" tabindex="-1" aria-live="polite">
+            <button class="back-button" id="confirmation-back-button" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+              Back to browse
+            </button>
+            <p class="eyebrow">Pending verification</p>
+            <h1>Profile submitted.</h1>
+            <p>Your co-op profile is saved as a draft. It will not appear publicly until CoopGrid verifies that the account belongs to the cooperative.</p>
+            <div class="verification-steps" aria-label="Profile review steps">
+              <div><strong>1</strong><span>Draft received</span></div>
+              <div><strong>2</strong><span>Manual check</span></div>
+              <div><strong>3</strong><span>Go online</span></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <template id="profile-row-template">
+      <article class="profile-row">
+        <button class="profile-row__button" type="button">
+          <span class="avatar"></span>
+          <span class="profile-row__main">
+            <span class="profile-row__name"></span>
+            <span class="profile-row__meta"></span>
+            <span class="profile-row__intro"></span>
+          </span>
+          <span class="profile-row__arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+          </span>
+        </button>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
