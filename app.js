@@ -1,4 +1,4 @@
-﻿let cooperatives = [];
+let cooperatives = [];
 
 const state = {
   view: "browse",

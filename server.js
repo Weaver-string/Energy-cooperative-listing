@@ -1,4 +1,4 @@
-﻿const crypto = require("node:crypto");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
@@ -55,9 +55,18 @@ async function handleRequest(req, res) {
   try {
     const url = new URL(req.url, PUBLIC_BASE_URL);
 
+    if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/api/health")) {
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
     if (isStateChangingRequest(req) && !isTrustedOrigin(req)) {
       sendJson(res, 403, { error: "Request origin is not allowed." });
       return;
+    }
+
+    if (requiresStorage(url.pathname)) {
+      await ensureStorageReady();
     }
 
     if (req.method === "POST" && url.pathname === "/api/auth/request-access") {
@@ -77,11 +86,6 @@ async function handleRequest(req, res) {
 
     if (req.method === "GET" && url.pathname === "/api/auth/session") {
       await handleSession(req, res);
-      return;
-    }
-
-    if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/api/health")) {
-      sendJson(res, 200, { ok: true });
       return;
     }
 
@@ -139,7 +143,6 @@ async function startServer() {
 }
 
 async function handler(req, res) {
-  await ensureStorageReady();
   await handleRequest(req, res);
 }
 
@@ -538,6 +541,10 @@ function isAdminRequest(req, url) {
 
 function isStateChangingRequest(req) {
   return ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
+}
+
+function requiresStorage(pathname) {
+  return pathname.startsWith("/api/") && pathname !== "/api/health";
 }
 
 function isTrustedOrigin(req) {

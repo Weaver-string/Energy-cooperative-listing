@@ -1,4 +1,4 @@
-﻿# Energy Agora Setup
+# Energy Agora Setup
 
 ## Run Locally
 
