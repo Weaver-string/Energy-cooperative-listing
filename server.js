@@ -459,6 +459,12 @@ async function sendAdminEmail(subject, text, fallbackFileName) {
     return;
   }
 
+  if (USE_DATABASE) {
+    console.warn("RESEND_API_KEY is not set; admin email was not sent.");
+    console.warn(`${subject}\n${text}`);
+    return;
+  }
+
   const eml = [
     `To: ${ADMIN_EMAIL}`,
     `Subject: ${subject}`,
@@ -553,8 +559,10 @@ function isLocalRequest(req) {
 }
 
 async function ensureStorage() {
-  ensureDataFiles();
-  if (!USE_DATABASE) return;
+  if (!USE_DATABASE) {
+    ensureDataFiles();
+    return;
+  }
 
   const pool = getPool();
   await pool.query(`
