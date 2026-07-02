@@ -52,12 +52,26 @@ Do not rely on local JSON files for a permanent hosted site. Hosted services can
 4. You receive a profile review email with an approval link.
 5. Opening the approval link marks the account as verified and publishes the profile online.
 
+## Authentication
+
+Energy Agora uses its own backend auth flow. Keep Neon Auth turned off unless you intentionally decide to rebuild login around Neon later.
+
+- Passwords are stored as salted `scrypt` hashes.
+- Login state is stored in server-side sessions.
+- Browsers receive an HttpOnly `ea_session` cookie, not account data in localStorage.
+- Profile submission requires a valid session cookie.
+- New accounts remain `Pending manual review` until you approve them from the email link.
+- State-changing requests check the browser origin to reduce CSRF risk.
+
 ## Useful Endpoints
 
 ```text
 GET  /health
 GET  /api/cooperatives
 POST /api/auth/request-access
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/session
 POST /api/profiles
 GET  /api/listing-requests?adminToken=...
 GET  /api/listing-requests/:id/approve?token=...

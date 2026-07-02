@@ -11,6 +11,7 @@ const OUTBOX_DIR = path.join(DATA_DIR, "outbox");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const REQUESTS_FILE = path.join(DATA_DIR, "listing-requests.json");
 const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
+const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const ADMIN_EMAIL = process.env.ADMIN_VERIFICATION_EMAIL || "keyse00ali@gmail.com";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
@@ -18,18 +19,22 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM || "Energy Agora <onboarding@resend.dev>";
 const DATABASE_URL = process.env.DATABASE_URL || "";
 const USE_DATABASE = Boolean(DATABASE_URL);
+const SESSION_COOKIE = "ea_session";
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
 let dbPool = null;
 
 const COLLECTIONS = {
   accounts: "accounts",
   requests: "listing-requests",
   profiles: "profiles",
+  sessions: "sessions",
 };
 
 const COLLECTION_FILES = {
   [COLLECTIONS.accounts]: ACCOUNTS_FILE,
   [COLLECTIONS.requests]: REQUESTS_FILE,
   [COLLECTIONS.profiles]: PROFILES_FILE,
+  [COLLECTIONS.sessions]: SESSIONS_FILE,
 };
 
 const MIME_TYPES = {
@@ -47,8 +52,28 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, PUBLIC_BASE_URL);
 
+    if (isStateChangingRequest(req) && !isTrustedOrigin(req)) {
+      sendJson(res, 403, { error: "Request origin is not allowed." });
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/auth/request-access") {
       await handleAccessRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/auth/login") {
+      await handleLogin(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+      await handleLogout(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/auth/session") {
+      await handleSession(req, res);
       return;
     }
 
@@ -120,16 +145,27 @@ async function handleAccessRequest(req, res) {
     return;
   }
 
+  if (password.length < 8) {
+    sendJson(res, 400, { error: "Password must be at least 8 characters." });
+    return;
+  }
+
   const accounts = await readRecords(COLLECTIONS.accounts);
-  const passwordHash = hashPassword(password);
   const existing = accounts.find((account) => account.email === email);
 
   if (existing) {
-    if (existing.passwordHash !== passwordHash) {
+    const passwordResult = await verifyPassword(password, existing.passwordHash);
+    if (!passwordResult.ok) {
       sendJson(res, 401, { error: "That email already has an account. Check the password and try again." });
       return;
     }
 
+    if (passwordResult.needsUpgrade) {
+      existing.passwordHash = await hashPassword(password);
+      await writeRecords(COLLECTIONS.accounts, accounts);
+    }
+
+    await createSession(res, existing);
     sendJson(res, 200, {
       account: publicAccount(existing),
       isNewAccount: false,
@@ -140,7 +176,7 @@ async function handleAccessRequest(req, res) {
   const account = {
     id: `acct_${crypto.randomUUID()}`,
     email,
-    passwordHash,
+    passwordHash: await hashPassword(password),
     orgName,
     country,
     verificationStatus: "Pending manual review",
@@ -153,23 +189,64 @@ async function handleAccessRequest(req, res) {
   const request = await createListingRequest(account);
   await notifyAdmin(request);
 
+  await createSession(res, account);
   sendJson(res, 201, {
     account: publicAccount(account),
     isNewAccount: true,
-    request,
+    request: publicListingRequest(request),
   });
+}
+
+async function handleLogin(req, res) {
+  const body = await readBody(req);
+  const email = String(body.email || "").trim().toLowerCase();
+  const password = String(body.password || "");
+
+  if (!email || !password) {
+    sendJson(res, 400, { error: "Email and password are required." });
+    return;
+  }
+
+  const accounts = await readRecords(COLLECTIONS.accounts);
+  const account = accounts.find((item) => item.email === email);
+  if (!account) {
+    sendJson(res, 401, { error: "Invalid email or password." });
+    return;
+  }
+
+  const passwordResult = await verifyPassword(password, account.passwordHash);
+  if (!passwordResult.ok) {
+    sendJson(res, 401, { error: "Invalid email or password." });
+    return;
+  }
+
+  if (passwordResult.needsUpgrade) {
+    account.passwordHash = await hashPassword(password);
+    await writeRecords(COLLECTIONS.accounts, accounts);
+  }
+
+  await createSession(res, account);
+  sendJson(res, 200, { account: publicAccount(account) });
+}
+
+async function handleLogout(req, res) {
+  await revokeSession(req);
+  clearSessionCookie(res);
+  sendJson(res, 200, { ok: true });
+}
+
+async function handleSession(req, res) {
+  const account = await getAuthenticatedAccount(req);
+  sendJson(res, 200, { account: account ? publicAccount(account) : null });
 }
 
 async function handleProfileSubmission(req, res) {
   const body = await readBody(req);
-  const accountId = String(body.accountId || "").trim();
-  const email = String(body.email || "").trim().toLowerCase();
   const profile = body.profile || {};
-  const accounts = await readRecords(COLLECTIONS.accounts);
-  const account = accounts.find((item) => item.id === accountId && item.email === email);
+  const account = await getAuthenticatedAccount(req);
 
   if (!account) {
-    sendJson(res, 401, { error: "Please request listing access before submitting a profile." });
+    sendJson(res, 401, { error: "Please log in before submitting a profile." });
     return;
   }
 
@@ -438,6 +515,23 @@ function isAdminRequest(req, url) {
   return Boolean(ADMIN_TOKEN && (bearerToken === ADMIN_TOKEN || queryToken === ADMIN_TOKEN));
 }
 
+function isStateChangingRequest(req) {
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
+}
+
+function isTrustedOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+
+  try {
+    const publicOrigin = new URL(PUBLIC_BASE_URL).origin;
+    const hostOrigin = `${PUBLIC_BASE_URL.startsWith("https://") ? "https" : "http"}://${req.headers.host}`;
+    return origin === publicOrigin || origin === hostOrigin;
+  } catch {
+    return false;
+  }
+}
+
 function isLocalRequest(req) {
   const host = req.headers.host || "";
   return host.startsWith("localhost:") || host.startsWith("127.0.0.1:");
@@ -465,6 +559,7 @@ function ensureDataFiles() {
   if (!fs.existsSync(ACCOUNTS_FILE)) writeJson(ACCOUNTS_FILE, []);
   if (!fs.existsSync(REQUESTS_FILE)) writeJson(REQUESTS_FILE, []);
   if (!fs.existsSync(PROFILES_FILE)) writeJson(PROFILES_FILE, []);
+  if (!fs.existsSync(SESSIONS_FILE)) writeJson(SESSIONS_FILE, []);
 }
 
 async function readRecords(collection) {
@@ -526,8 +621,128 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function hashPassword(password) {
-  return crypto.createHash("sha256").update(password).digest("hex");
+async function createSession(res, account) {
+  const sessions = await readRecords(COLLECTIONS.sessions);
+  const token = crypto.randomBytes(32).toString("base64url");
+  const session = {
+    id: `sess_${crypto.randomUUID()}`,
+    accountId: account.id,
+    tokenHash: hashSessionToken(token),
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString(),
+  };
+
+  sessions.push(session);
+  await writeRecords(COLLECTIONS.sessions, pruneExpiredSessions(sessions));
+  setSessionCookie(res, token);
+}
+
+async function getAuthenticatedAccount(req) {
+  const token = getCookie(req, SESSION_COOKIE);
+  if (!token) return null;
+
+  const tokenHash = hashSessionToken(token);
+  const sessions = await readRecords(COLLECTIONS.sessions);
+  const now = Date.now();
+  const session = sessions.find(
+    (item) => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > now,
+  );
+  if (!session) return null;
+
+  const accounts = await readRecords(COLLECTIONS.accounts);
+  return accounts.find((account) => account.id === session.accountId) || null;
+}
+
+async function revokeSession(req) {
+  const token = getCookie(req, SESSION_COOKIE);
+  if (!token) return;
+
+  const tokenHash = hashSessionToken(token);
+  const sessions = await readRecords(COLLECTIONS.sessions);
+  await writeRecords(
+    COLLECTIONS.sessions,
+    sessions.filter((session) => session.tokenHash !== tokenHash),
+  );
+}
+
+function pruneExpiredSessions(sessions) {
+  const now = Date.now();
+  return sessions.filter((session) => Date.parse(session.expiresAt) > now);
+}
+
+function hashSessionToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function setSessionCookie(res, token) {
+  const parts = [
+    `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
+    "HttpOnly",
+    "Path=/",
+    "SameSite=Lax",
+    `Max-Age=${SESSION_MAX_AGE_SECONDS}`,
+  ];
+  if (PUBLIC_BASE_URL.startsWith("https://")) parts.push("Secure");
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
+
+function clearSessionCookie(res) {
+  const parts = [
+    `${SESSION_COOKIE}=`,
+    "HttpOnly",
+    "Path=/",
+    "SameSite=Lax",
+    "Max-Age=0",
+  ];
+  if (PUBLIC_BASE_URL.startsWith("https://")) parts.push("Secure");
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
+
+function getCookie(req, name) {
+  const cookies = String(req.headers.cookie || "").split(";").map((item) => item.trim());
+  const prefix = `${name}=`;
+  const match = cookies.find((cookie) => cookie.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
+}
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("base64url");
+  const key = await scrypt(password, salt);
+  return `scrypt$${salt}$${key.toString("base64url")}`;
+}
+
+async function verifyPassword(password, storedHash) {
+  if (String(storedHash || "").startsWith("scrypt$")) {
+    const [, salt, expectedHash] = storedHash.split("$");
+    if (!salt || !expectedHash) return { ok: false, needsUpgrade: true };
+    const actual = (await scrypt(password, salt)).toString("base64url");
+    return {
+      ok: timingSafeEqualText(actual, expectedHash),
+      needsUpgrade: false,
+    };
+  }
+
+  const legacyHash = crypto.createHash("sha256").update(password).digest("hex");
+  return {
+    ok: timingSafeEqualText(legacyHash, String(storedHash || "")),
+    needsUpgrade: true,
+  };
+}
+
+function scrypt(password, salt) {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, 64, (error, derivedKey) => {
+      if (error) reject(error);
+      else resolve(derivedKey);
+    });
+  });
+}
+
+function timingSafeEqualText(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function publicAccount(account) {
@@ -539,6 +754,19 @@ function publicAccount(account) {
     verificationStatus: account.verificationStatus,
     createdAt: account.createdAt,
     verifiedAt: account.verifiedAt || null,
+  };
+}
+
+function publicListingRequest(request) {
+  return {
+    id: request.id,
+    accountId: request.accountId,
+    email: request.email,
+    orgName: request.orgName,
+    country: request.country,
+    status: request.status,
+    requestedAt: request.requestedAt,
+    approvedAt: request.approvedAt,
   };
 }
 

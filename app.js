@@ -62,10 +62,12 @@ const EUROPEAN_COUNTRIES = [
 
 const formatNumber = new Intl.NumberFormat("en-GB");
 const AuthProvider = {
-  sessionKey: "energy-agora.session.account",
-
-  getSession() {
-    return JSON.parse(localStorage.getItem(this.sessionKey) || "null");
+  async getSession() {
+    localStorage.removeItem("energy-agora.session.account");
+    const response = await fetch("/api/auth/session");
+    if (!response.ok) return null;
+    const payload = await response.json();
+    return payload.account || null;
   },
 
   async requestAccess({ email, password, orgName, country }) {
@@ -80,16 +82,14 @@ const AuthProvider = {
       throw new Error(payload.error || "Could not request listing access.");
     }
 
-    const account = {
+    return {
       ...payload.account,
       isNewAccount: payload.isNewAccount,
     };
-    localStorage.setItem(this.sessionKey, JSON.stringify(account));
-    return account;
   },
 
-  signOut() {
-    localStorage.removeItem(this.sessionKey);
+  async signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
   },
 };
 
@@ -108,11 +108,7 @@ const ProfileProvider = {
     const response = await fetch("/api/profiles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        accountId: state.user.id,
-        email: state.user.email,
-        profile,
-      }),
+      body: JSON.stringify({ profile }),
     });
 
     const payload = await response.json();
@@ -143,7 +139,7 @@ const sortFilter = document.querySelector("#sort-filter");
 const rowTemplate = document.querySelector("#profile-row-template");
 
 async function init() {
-  state.user = AuthProvider.getSession();
+  state.user = await AuthProvider.getSession();
   renderCountryFilter();
   bindEvents();
   render();
@@ -171,7 +167,7 @@ async function loadOnlineProfiles() {
 function bindEvents() {
   document.querySelector("#home-button").addEventListener("click", showBrowse);
   document.querySelector("#back-button").addEventListener("click", showBrowse);
-  document.querySelector("#login-button").addEventListener("click", showAuth);
+  document.querySelector("#login-button").addEventListener("click", handleLoginButton);
   document.querySelector("#auth-back-button").addEventListener("click", showBrowse);
   document.querySelector("#create-button").addEventListener("click", beginProfileSetup);
   document.querySelector("#create-back-button").addEventListener("click", showBrowse);
@@ -281,7 +277,7 @@ function renderShell() {
     state.view !== "create" || !state.profileSubmitted,
   );
   document.body.classList.toggle("is-focused-flow", state.view === "create" || state.view === "auth");
-  document.querySelector("#login-button").textContent = state.user ? state.user.orgName : "Log in";
+  document.querySelector("#login-button").textContent = state.user ? "Log out" : "Log in";
   document.querySelector("#create-button").textContent = state.user ? "Edit listing" : "List a co-op";
 }
 
@@ -395,6 +391,20 @@ function renderCompactList(coops) {
 function showBrowse(shouldRender = true) {
   state.view = "browse";
   if (shouldRender) render();
+}
+
+async function handleLoginButton() {
+  if (!state.user) {
+    showAuth();
+    return;
+  }
+
+  await AuthProvider.signOut();
+  state.user = null;
+  state.profileSubmitted = false;
+  profileForm.reset();
+  state.draftPhotoUrl = "";
+  showBrowse();
 }
 
 function showAuth() {
