@@ -4,37 +4,17 @@
   "buildCommand": null,
   "outputDirectory": ".",
   "functions": {
-    "api/health.js": {
-      "maxDuration": 5
-    },
-    "api/[...path].js": {
+    "api/**/*.js": {
       "maxDuration": 15
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/health",
-      "destination": "/api/health"
+      "handle": "filesystem"
     },
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    },
-    {
-      "source": "/assets/:path*",
-      "destination": "/assets/:path*"
-    },
-    {
-      "source": "/app.js",
-      "destination": "/app.js"
-    },
-    {
-      "source": "/styles.css",
-      "destination": "/styles.css"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
