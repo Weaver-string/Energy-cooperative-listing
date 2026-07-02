@@ -18,11 +18,36 @@ Without `RESEND_API_KEY`, notification emails are saved under `data/outbox/` so 
 
 The app is now deployable as a single Node web service: it serves the website, stores profile/account requests, sends verification emails, and publishes approved profiles.
 
-Recommended free stack:
+Recommended no-card stack:
 
-- Render free web service for the website and backend.
-- Supabase or Neon free Postgres for persistent profile/account data.
+- Vercel Hobby for the website and serverless backend.
+- Neon free Postgres for persistent profile/account data.
 - Resend free tier for approval emails.
+
+### Vercel
+
+1. Push this repository to GitHub.
+2. In Vercel, choose **Add New... Project**.
+3. Import `Weaver-string/Energy-cooperative-listing`.
+4. Leave the framework preset as **Other** if Vercel asks.
+5. Add these environment variables:
+
+```text
+DATABASE_URL=postgresql://...
+DATABASE_SSL=true
+PUBLIC_BASE_URL=https://your-vercel-url.vercel.app
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM=Energy Agora <verified-sender@yourdomain.com>
+ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
+ADMIN_TOKEN=long_random_admin_secret
+```
+
+After the first deployment, copy the generated Vercel URL back into `PUBLIC_BASE_URL`, then redeploy. Approval links use this value.
+Vercel requires `DATABASE_URL`; the serverless filesystem should not be used for account/profile data.
+
+### Render
+
+Render also works, but it may ask for a credit card. Use it only if you are comfortable with that.
 
 1. Push this folder to a GitHub repository.
 2. In Render, create a new Blueprint from that repository.
@@ -67,6 +92,7 @@ Energy Agora uses its own backend auth flow. Keep Neon Auth turned off unless yo
 
 ```text
 GET  /health
+GET  /api/health
 GET  /api/cooperatives
 POST /api/auth/request-access
 POST /api/auth/login

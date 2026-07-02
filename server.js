@@ -22,6 +22,7 @@ const USE_DATABASE = Boolean(DATABASE_URL);
 const SESSION_COOKIE = "ea_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
 let dbPool = null;
+let storageReadyPromise = null;
 
 const COLLECTIONS = {
   accounts: "accounts",
@@ -48,7 +49,9 @@ const MIME_TYPES = {
   ".svg": "image/svg+xml",
 };
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer(handleRequest);
+
+async function handleRequest(req, res) {
   try {
     const url = new URL(req.url, PUBLIC_BASE_URL);
 
@@ -77,7 +80,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === "GET" && url.pathname === "/health") {
+    if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/api/health")) {
       sendJson(res, 200, { ok: true });
       return;
     }
@@ -117,9 +120,11 @@ const server = http.createServer(async (req, res) => {
     console.error(error);
     sendJson(res, 500, { error: "Internal server error" });
   }
-});
+}
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 async function startServer() {
   await ensureStorage();
@@ -131,6 +136,16 @@ async function startServer() {
       console.log("RESEND_API_KEY is not set; notification emails will be saved to data/outbox.");
     }
   });
+}
+
+async function handler(req, res) {
+  await ensureStorageReady();
+  await handleRequest(req, res);
+}
+
+function ensureStorageReady() {
+  if (!storageReadyPromise) storageReadyPromise = ensureStorage();
+  return storageReadyPromise;
 }
 
 async function handleAccessRequest(req, res) {
@@ -857,6 +872,11 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+module.exports = {
+  handler,
+  server,
+};
 
 
 
