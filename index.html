@@ -31,13 +31,18 @@
             <p class="eyebrow">Member-owned energy</p>
             <h1 id="browse-title">Find a co-op you'd actually join.</h1>
             <p>
-              See what it costs to join, what electricity might cost, and what members get back.
+              Compare co-ops for household membership or business surplus electricity buying.
             </p>
           </div>
           <img src="assets/network-illustration.png" alt="Illustration of connected renewable energy cooperative profiles" />
         </section>
 
         <section class="browse-controls" aria-label="Browse filters">
+          <div class="audience-switch" aria-label="Browsing mode">
+            <button type="button" data-audience="all" aria-pressed="true">All</button>
+            <button type="button" data-audience="members">Households</button>
+            <button type="button" data-audience="surplus">Business buyers</button>
+          </div>
           <div class="chip-group" id="country-filter" aria-label="Country filters"></div>
           <select id="asset-filter" aria-label="Filter by asset type">
             <option value="all">All assets</option>
@@ -146,7 +151,7 @@
               </button>
               <p class="eyebrow">Create profile</p>
               <h1 id="create-title">Set up your co-op profile.</h1>
-              <p>Start with the same public signals people expect from a social profile: identity, place, bio, and member costs.</p>
+              <p>Choose whether this profile is for attracting members, selling surplus electricity, or both.</p>
             </div>
 
             <section class="form-section">
@@ -198,6 +203,20 @@
             </section>
 
             <section class="form-section">
+              <h2>Listing purpose</h2>
+              <div class="field-grid">
+                <label class="checkbox-field">
+                  <input id="new-list-members" name="listingMembers" type="checkbox" checked />
+                  <span>Attract household members</span>
+                </label>
+                <label class="checkbox-field">
+                  <input id="new-list-surplus" name="listingSurplus" type="checkbox" />
+                  <span>Sell surplus electricity</span>
+                </label>
+              </div>
+            </section>
+
+            <section class="form-section" id="membership-section">
               <h2>Membership details</h2>
               <div class="field-grid">
                 <label>
@@ -221,6 +240,32 @@
                   <input id="new-electricity-cost" name="electricityCost" type="text" placeholder="EUR 0.18 / kWh" />
                 </label>
               </div>
+            </section>
+
+            <section class="form-section field-hidden" id="surplus-section">
+              <h2>Surplus electricity</h2>
+              <div class="field-grid">
+                <label>
+                  <span>Available surplus</span>
+                  <input id="new-surplus-volume" name="surplusVolume" type="text" placeholder="2.5 GWh / year or 500 MWh summer surplus" />
+                </label>
+                <label>
+                  <span>Business rate</span>
+                  <input id="new-surplus-rate" name="surplusRate" type="text" placeholder="EUR 0.14 / kWh or negotiable PPA" />
+                </label>
+                <label>
+                  <span>Minimum buyer size</span>
+                  <input id="new-buyer-minimum" name="buyerMinimum" type="text" placeholder="From 100 MWh / year" />
+                </label>
+                <label>
+                  <span>Business contact email</span>
+                  <input id="new-buyer-contact" name="buyerContact" type="email" placeholder="sales@cooperative.example" />
+                </label>
+              </div>
+              <label class="wide-field">
+                <span>Availability notes</span>
+                <textarea id="new-surplus-availability" name="surplusAvailability" rows="3" placeholder="Seasonality, contract type, location limits, or other conditions for business buyers."></textarea>
+              </label>
             </section>
 
             <section class="form-section">

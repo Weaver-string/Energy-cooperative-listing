@@ -289,12 +289,19 @@ async function handleProfileSubmission(req, res) {
     country,
     members: toNumber(profile.members),
     capacity: toNumber(profile.capacity),
+    listingGoals: normaliseListingGoals(profile.listingGoals),
     openMembers: Boolean(profile.openMembers),
     status: cleanText(profile.status) || "Open membership",
     assets: normaliseAssets(profile.assets, profile.capacity),
     needs: ["Member onboarding"],
     memberCost: cleanText(profile.memberCost),
     electricityCost: cleanText(profile.electricityCost),
+    sellsSurplus: Boolean(profile.sellsSurplus || normaliseListingGoals(profile.listingGoals).includes("surplus")),
+    surplusVolume: cleanText(profile.surplusVolume),
+    surplusRate: cleanText(profile.surplusRate),
+    buyerMinimum: cleanText(profile.buyerMinimum),
+    surplusAvailability: cleanText(profile.surplusAvailability),
+    buyerContact: cleanText(profile.buyerContact),
     intro: cleanText(profile.intro),
     connections: [],
     color: cleanText(profile.color) || "#0e765d",
@@ -431,6 +438,12 @@ async function notifyProfileSubmitted(request, profile) {
     `Members: ${profile.members || "Not listed"}`,
     `Joining cost: ${profile.memberCost || "Not listed"}`,
     `Electricity cost: ${profile.electricityCost || "Not listed"}`,
+    `Listing purpose: ${normaliseListingGoals(profile.listingGoals).join(", ")}`,
+    `Surplus electricity: ${profile.sellsSurplus ? "Yes" : "No"}`,
+    `Surplus volume: ${profile.surplusVolume || "Not listed"}`,
+    `Business rate: ${profile.surplusRate || "Not listed"}`,
+    `Minimum buyer: ${profile.buyerMinimum || "Not listed"}`,
+    `Business contact: ${profile.buyerContact || "Not listed"}`,
     "",
     "Approve after verification:",
     approveUrl,
@@ -809,12 +822,19 @@ function publicProfile(profile) {
     country: profile.country,
     members: profile.members,
     capacity: profile.capacity,
+    listingGoals: normaliseListingGoals(profile.listingGoals),
     openMembers: profile.openMembers,
     status: profile.status,
     assets: profile.assets,
     needs: profile.needs,
     memberCost: profile.memberCost,
     electricityCost: profile.electricityCost,
+    sellsSurplus: Boolean(profile.sellsSurplus || normaliseListingGoals(profile.listingGoals).includes("surplus")),
+    surplusVolume: profile.surplusVolume,
+    surplusRate: profile.surplusRate,
+    buyerMinimum: profile.buyerMinimum,
+    surplusAvailability: profile.surplusAvailability,
+    buyerContact: profile.buyerContact,
     intro: profile.intro,
     connections: profile.connections,
     color: profile.color,
@@ -841,6 +861,12 @@ function normaliseAssets(assets, capacity) {
       value: numericCapacity ? `${numericCapacity.toFixed(1)} MW` : "Not listed",
     },
   ];
+}
+
+function normaliseListingGoals(value) {
+  const goals = Array.isArray(value) ? value : [];
+  const cleanGoals = goals.filter((goal) => ["members", "surplus"].includes(goal));
+  return cleanGoals.length ? [...new Set(cleanGoals)] : ["members"];
 }
 
 function makeProfileId(value, profiles) {

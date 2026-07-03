@@ -4,6 +4,7 @@ const state = {
   view: "browse",
   query: "",
   country: "All",
+  audience: "all",
   asset: "all",
   openMembers: false,
   sort: "match",
@@ -137,6 +138,9 @@ const assetFilter = document.querySelector("#asset-filter");
 const membersFilter = document.querySelector("#members-filter");
 const sortFilter = document.querySelector("#sort-filter");
 const rowTemplate = document.querySelector("#profile-row-template");
+const audienceButtons = document.querySelectorAll("[data-audience]");
+const membershipSection = document.querySelector("#membership-section");
+const surplusSection = document.querySelector("#surplus-section");
 
 async function init() {
   state.user = await AuthProvider.getSession();
@@ -179,6 +183,19 @@ function bindEvents() {
   profileForm.addEventListener("change", updateCreateFormState);
   profileForm.addEventListener("submit", publishProfile);
   document.querySelector("#new-photo").addEventListener("change", handlePhotoUpload);
+  document.querySelector("#new-list-members").addEventListener("change", updateListingPurpose);
+  document.querySelector("#new-list-surplus").addEventListener("change", updateListingPurpose);
+
+  audienceButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.audience = button.dataset.audience;
+      audienceButtons.forEach((item) =>
+        item.setAttribute("aria-pressed", String(item.dataset.audience === state.audience)),
+      );
+      showBrowse(false);
+      render();
+    });
+  });
 
   searchInput.addEventListener("input", () => {
     state.query = searchInput.value.trim().toLowerCase();
@@ -231,6 +248,10 @@ function getFilteredCoops() {
       coop.intro,
       coop.memberCost,
       coop.electricityCost,
+      coop.surplusVolume,
+      coop.surplusRate,
+      coop.buyerMinimum,
+      coop.surplusAvailability,
       ...(coop.assets || []).map((asset) => `${asset.type} ${asset.detail}`),
     ]
       .join(" ")
@@ -242,8 +263,12 @@ function getFilteredCoops() {
       state.asset === "all" ||
       (coop.assets || []).some((asset) => asset.type.toLowerCase() === state.asset);
     const matchesMembers = !state.openMembers || coop.openMembers;
+    const matchesAudience =
+      state.audience === "all" ||
+      (state.audience === "members" && listsForMembers(coop)) ||
+      (state.audience === "surplus" && listsSurplus(coop));
 
-    return matchesQuery && matchesCountry && matchesAsset && matchesMembers;
+    return matchesQuery && matchesCountry && matchesAsset && matchesMembers && matchesAudience;
   });
 
   return filtered.sort((a, b) => {
@@ -303,8 +328,7 @@ function createProfileRow(coop) {
 
   setAvatar(avatar, coop);
   node.querySelector(".profile-row__name").textContent = coop.name;
-  node.querySelector(".profile-row__meta").textContent =
-    `${coop.city}, ${coop.country} / ${formatNumber.format(coop.members)} members / ${coop.memberCost || "Joining cost not listed"} / ${coop.electricityCost || "Power price not listed"}`;
+  node.querySelector(".profile-row__meta").textContent = getRowMeta(coop);
   node.querySelector(".profile-row__intro").textContent = coop.intro;
 
   return node;
@@ -326,12 +350,42 @@ function getProfileMarkup(coop, isPreview) {
   const verificationStatus = coop.verificationStatus || "Pending manual review";
   const capacity = Number(coop.capacity || 0);
   const assets = coop.assets || [];
+  const purposeText = getPurposeText(coop);
+  const memberSection = listsForMembers(coop)
+    ? `
+      <section class="detail-section">
+        <h2>For households</h2>
+        <div class="profile-meta-grid profile-meta-grid--compact">
+          <div class="detail-stat"><span>Joining cost</span><strong>${escapeHtml(memberCost)}</strong></div>
+          <div class="detail-stat"><span>Electricity cost</span><strong>${escapeHtml(electricityCost)}</strong></div>
+          <div class="detail-stat"><span>Membership</span><strong>${coop.openMembers ? "Open" : "Waitlist"}</strong></div>
+        </div>
+      </section>
+    `
+    : "";
+  const surplusSectionMarkup = listsSurplus(coop)
+    ? `
+      <section class="detail-section">
+        <h2>For business buyers</h2>
+        <div class="profile-meta-grid profile-meta-grid--compact">
+          <div class="detail-stat"><span>Available surplus</span><strong>${escapeHtml(coop.surplusVolume || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>Business rate</span><strong>${escapeHtml(coop.surplusRate || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>Minimum buyer</span><strong>${escapeHtml(coop.buyerMinimum || "Not listed")}</strong></div>
+        </div>
+        ${
+          coop.surplusAvailability
+            ? `<p>${escapeHtml(coop.surplusAvailability)}</p>`
+            : ""
+        }
+      </section>
+    `
+    : "";
   return `
     <div class="profile-cover"></div>
     <div class="profile-page__body">
       <header class="profile-page__header">
         ${getAvatarMarkup(coop)}
-        <p class="eyebrow">${escapeHtml(coop.status)} | ${escapeHtml(verificationStatus)}</p>
+        <p class="eyebrow">${escapeHtml(purposeText)} | ${escapeHtml(verificationStatus)}</p>
         <h1>${escapeHtml(coop.name)}</h1>
         <div class="profile-page__location">${escapeHtml(coop.city)}, ${escapeHtml(coop.country)}</div>
         <p class="profile-page__intro">${escapeHtml(coop.intro)}</p>
@@ -344,13 +398,13 @@ function getProfileMarkup(coop, isPreview) {
       </div>
 
       <section class="profile-meta-grid" aria-label="Profile statistics">
-        <div class="detail-stat"><span>Joining cost</span><strong>${escapeHtml(memberCost)}</strong></div>
-        <div class="detail-stat"><span>Electricity cost</span><strong>${escapeHtml(electricityCost)}</strong></div>
-        <div class="detail-stat"><span>Membership</span><strong>${coop.openMembers ? "Open" : "Waitlist"}</strong></div>
         <div class="detail-stat"><span>Members</span><strong>${formatNumber.format(coop.members || 0)}</strong></div>
         <div class="detail-stat"><span>Owned capacity</span><strong>${capacity.toFixed(1)} MW</strong></div>
         <div class="detail-stat"><span>Verification</span><strong>${escapeHtml(verificationStatus)}</strong></div>
       </section>
+
+      ${memberSection}
+      ${surplusSectionMarkup}
 
       <section class="detail-section">
         <h2>Assets</h2>
@@ -474,6 +528,7 @@ function getDraftCoop() {
   const country = clean(form.get("country")) || "Country";
   const capacity = toNumber(form.get("capacity"));
   const assetValue = capacity ? `${capacity.toFixed(1)} MW` : "Not listed";
+  const listingGoals = getListingGoals(form);
 
   return {
     id: "draft",
@@ -483,12 +538,19 @@ function getDraftCoop() {
     country,
     members: Math.round(toNumber(form.get("members"))),
     capacity,
+    listingGoals,
     openMembers: form.get("openMembers") === "on",
     status: clean(form.get("status")) || "Open membership",
     assets: [{ type: "Member-owned energy", detail: "Cooperative portfolio", value: assetValue }],
     needs: ["Member onboarding"],
     memberCost: clean(form.get("memberCost")),
     electricityCost: clean(form.get("electricityCost")),
+    sellsSurplus: listingGoals.includes("surplus"),
+    surplusVolume: clean(form.get("surplusVolume")),
+    surplusRate: clean(form.get("surplusRate")),
+    buyerMinimum: clean(form.get("buyerMinimum")),
+    surplusAvailability: clean(form.get("surplusAvailability")),
+    buyerContact: clean(form.get("buyerContact")),
     intro:
       clean(form.get("intro")) ||
       "A short public bio will help potential members understand what this cooperative is building.",
@@ -534,6 +596,7 @@ async function publishProfile(event) {
 function resetCreateForm() {
   profileForm.reset();
   state.draftPhotoUrl = "";
+  updateListingPurpose();
   updateCreateFormState();
 }
 
@@ -565,12 +628,59 @@ function prefillProfileFromAccount() {
   if (!countryInput.value) countryInput.value = state.user.country;
 }
 
+function updateListingPurpose() {
+  const memberToggle = document.querySelector("#new-list-members");
+  const surplusToggle = document.querySelector("#new-list-surplus");
+  if (!memberToggle.checked && !surplusToggle.checked) {
+    memberToggle.checked = true;
+  }
+
+  membershipSection.classList.toggle("field-hidden", !memberToggle.checked);
+  surplusSection.classList.toggle("field-hidden", !surplusToggle.checked);
+  updateCreateFormState();
+}
+
 function updateCreateFormState() {
   const draft = getDraftCoop();
   uploadAvatar.innerHTML = draft.photoUrl
     ? `<img src="${draft.photoUrl}" alt="" />`
     : escapeHtml(draft.initials);
   uploadAvatar.style.background = draft.color;
+}
+
+function getListingGoals(form) {
+  const goals = [];
+  if (form.get("listingMembers") === "on") goals.push("members");
+  if (form.get("listingSurplus") === "on") goals.push("surplus");
+  return goals.length ? goals : ["members"];
+}
+
+function listsForMembers(coop) {
+  return !Array.isArray(coop.listingGoals) || coop.listingGoals.includes("members");
+}
+
+function listsSurplus(coop) {
+  return Boolean(coop.sellsSurplus || coop.listingGoals?.includes("surplus"));
+}
+
+function getPurposeText(coop) {
+  const purposes = [];
+  if (listsForMembers(coop)) purposes.push("Members");
+  if (listsSurplus(coop)) purposes.push("Surplus power");
+  return purposes.join(" + ") || "Co-op profile";
+}
+
+function getRowMeta(coop) {
+  const location = `${coop.city}, ${coop.country}`;
+  if (state.audience === "surplus" && listsSurplus(coop)) {
+    return `${location} / ${coop.surplusVolume || "Surplus available"} / ${coop.surplusRate || "Rate not listed"} / ${coop.buyerMinimum || "Buyer size flexible"}`;
+  }
+
+  if (state.audience === "all" && listsSurplus(coop) && !listsForMembers(coop)) {
+    return `${location} / Business buyers / ${coop.surplusRate || "Rate not listed"}`;
+  }
+
+  return `${location} / ${formatNumber.format(coop.members || 0)} members / ${coop.memberCost || "Joining cost not listed"} / ${coop.electricityCost || "Power price not listed"}`;
 }
 
 function handlePhotoUpload(event) {
