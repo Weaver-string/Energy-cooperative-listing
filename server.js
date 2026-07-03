@@ -13,7 +13,6 @@ const REQUESTS_FILE = path.join(DATA_DIR, "listing-requests.json");
 const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const ADMIN_EMAIL = process.env.ADMIN_VERIFICATION_EMAIL || "keyse00ali@gmail.com";
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM || "Energy Agora <onboarding@resend.dev>";
@@ -107,15 +106,6 @@ async function handleRequest(req, res) {
     const approvalMatch = url.pathname.match(/^\/api\/listing-requests\/([^/]+)\/approve$/);
     if (req.method === "GET" && approvalMatch) {
       await handleApproveRequest(res, approvalMatch[1], url.searchParams.get("token"));
-      return;
-    }
-
-    if (req.method === "GET" && url.pathname === "/api/listing-requests") {
-      if (!isAdminRequest(req, url)) {
-        sendJson(res, 401, { error: "Admin token required." });
-        return;
-      }
-      sendJson(res, 200, await getListingRequestsForAdmin());
       return;
     }
 
@@ -359,7 +349,6 @@ async function createListingRequest(account) {
 
 async function notifyAdmin(request) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
-  const dashboardUrl = `${PUBLIC_BASE_URL}/verify.html`;
   const subject = `New Energy Agora listing request: ${request.orgName}`;
   const text = [
     "A cooperative has requested listing access on Energy Agora.",
@@ -375,9 +364,6 @@ async function notifyAdmin(request) {
     "- Search public cooperative registry or official website.",
     "- Contact the cooperative through a public channel if needed.",
     "",
-    "Review dashboard:",
-    dashboardUrl,
-    "",
     "Approve after verification:",
     approveUrl,
   ].join("\n");
@@ -386,11 +372,10 @@ async function notifyAdmin(request) {
 }
 
 async function handleApproveRequest(res, requestId, token) {
-  const isAdminApproval = token && ADMIN_TOKEN && token === ADMIN_TOKEN;
   const requests = await readRecords(COLLECTIONS.requests);
   const request = requests.find((item) => item.id === requestId);
 
-  if (!request || (request.token !== token && !isAdminApproval)) {
+  if (!request || request.token !== token) {
     sendHtml(res, 404, "Approval link not found or expired.");
     return;
   }
@@ -430,43 +415,8 @@ async function getOpenListingRequest(account) {
   );
 }
 
-async function getListingRequestsForAdmin() {
-  const [requests, profiles] = await Promise.all([
-    readRecords(COLLECTIONS.requests),
-    readRecords(COLLECTIONS.profiles),
-  ]);
-
-  return requests.map((request) => {
-    const profile = profiles.find((item) => item.accountId === request.accountId);
-    return {
-      ...publicListingRequest(request),
-      approveUrl: `/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`,
-      profile: profile
-        ? {
-            id: profile.id,
-            name: profile.name,
-            city: profile.city,
-            country: profile.country,
-            ownerEmail: profile.ownerEmail,
-            listingGoals: normaliseListingGoals(profile.listingGoals),
-            memberCost: profile.memberCost,
-            electricityCost: profile.electricityCost,
-            sellsSurplus: Boolean(profile.sellsSurplus),
-            surplusVolume: profile.surplusVolume,
-            surplusRate: profile.surplusRate,
-            buyerMinimum: profile.buyerMinimum,
-            buyerContact: profile.buyerContact,
-            submittedAt: profile.submittedAt,
-            updatedAt: profile.updatedAt,
-          }
-        : null,
-    };
-  });
-}
-
 async function notifyProfileSubmitted(request, profile) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
-  const dashboardUrl = `${PUBLIC_BASE_URL}/verify.html`;
   const subject = `Energy Agora profile ready for review: ${profile.name}`;
   const text = [
     "A cooperative profile draft has been submitted on Energy Agora.",
@@ -484,9 +434,6 @@ async function notifyProfileSubmitted(request, profile) {
     `Business rate: ${profile.surplusRate || "Not listed"}`,
     `Minimum buyer: ${profile.buyerMinimum || "Not listed"}`,
     `Business contact: ${profile.buyerContact || "Not listed"}`,
-    "",
-    "Review dashboard:",
-    dashboardUrl,
     "",
     "Approve after verification:",
     approveUrl,
@@ -585,14 +532,6 @@ function sendJson(res, status, data) {
 function sendHtml(res, status, body) {
   res.writeHead(status, { "Content-Type": "text/html; charset=utf-8" });
   res.end(`<!doctype html><html><body>${body}</body></html>`);
-}
-
-function isAdminRequest(req, url) {
-  if (!ADMIN_TOKEN && isLocalRequest(req)) return true;
-  const authHeader = req.headers.authorization || "";
-  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-  const queryToken = url.searchParams.get("adminToken") || "";
-  return Boolean(ADMIN_TOKEN && (bearerToken === ADMIN_TOKEN || queryToken === ADMIN_TOKEN));
 }
 
 function isStateChangingRequest(req) {

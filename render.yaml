@@ -12,8 +12,6 @@
         value: production
       - key: ADMIN_VERIFICATION_EMAIL
         value: keyse00ali@gmail.com
-      - key: ADMIN_TOKEN
-        generateValue: true
       - key: PUBLIC_BASE_URL
         sync: false
       - key: DATABASE_URL

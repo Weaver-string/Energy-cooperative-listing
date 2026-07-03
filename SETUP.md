@@ -39,7 +39,6 @@ PUBLIC_BASE_URL=https://your-vercel-url.vercel.app
 RESEND_API_KEY=your_resend_api_key
 RESEND_FROM=Energy Agora <verified-sender@yourdomain.com>
 ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
-ADMIN_TOKEN=long_random_admin_secret
 ```
 
 After the first deployment, copy the generated Vercel URL back into `PUBLIC_BASE_URL`, then redeploy. Approval links use this value.
@@ -61,11 +60,9 @@ DATABASE_SSL=true
 RESEND_API_KEY=your_resend_api_key
 RESEND_FROM=Energy Agora <verified-sender@yourdomain.com>
 ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
-ADMIN_TOKEN=long_random_admin_secret
 ```
 
 `PUBLIC_BASE_URL` must be the final public URL of the hosted site. Approval links in emails use this value.
-Render can generate `ADMIN_TOKEN` from `render.yaml`; use it only when calling protected admin endpoints.
 
 Do not rely on local JSON files for a permanent hosted site. Hosted services can redeploy or restart, so persistent online data should use `DATABASE_URL`.
 
@@ -76,25 +73,6 @@ Do not rely on local JSON files for a permanent hosted site. Hosted services can
 3. The co-op submits its profile draft.
 4. You receive a profile review email with an approval link.
 5. Opening the approval link marks the account as verified and publishes the profile online.
-
-Admin review page:
-
-```text
-https://your-vercel-url.vercel.app/verify.html
-```
-
-Paste `ADMIN_TOKEN` into that page to see pending requests and approve them manually. The token is kept only in the current browser tab.
-
-For live Gmail notifications, set these Vercel environment variables and redeploy:
-
-```text
-RESEND_API_KEY=your_resend_api_key
-RESEND_FROM=Energy Agora <your_verified_sender>
-ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
-PUBLIC_BASE_URL=https://your-vercel-url.vercel.app
-```
-
-Without `RESEND_API_KEY`, the online site still accepts requests, but approval emails will not be delivered to Gmail. Locally, email drafts are saved to `data/outbox/`.
 
 ## Authentication
 
@@ -118,7 +96,6 @@ POST /api/auth/login
 POST /api/auth/logout
 GET  /api/auth/session
 POST /api/profiles
-GET  /api/listing-requests?adminToken=...
 GET  /api/listing-requests/:id/approve?token=...
 ```
 
