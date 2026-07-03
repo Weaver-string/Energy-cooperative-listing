@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Energy Agora Verification</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="verify-body">
+    <main class="verify-page">
+      <header class="verify-header">
+        <a class="back-button" href="/">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          Energy Agora
+        </a>
+        <p class="eyebrow">Admin verification</p>
+        <h1>Review co-op listing requests.</h1>
+        <p>Use this private page to check pending profiles and approve a cooperative once you have verified the requester.</p>
+      </header>
+
+      <section class="verify-panel" aria-labelledby="token-title">
+        <div>
+          <h2 id="token-title">Admin token</h2>
+          <p>Paste your ADMIN_TOKEN from Vercel. It is kept only for this browser tab.</p>
+        </div>
+        <form class="verify-token-form" id="token-form">
+          <input id="admin-token" name="adminToken" type="password" placeholder="Admin token" autocomplete="off" required />
+          <button class="button button--dark" type="submit">Load requests</button>
+        </form>
+      </section>
+
+      <section class="verify-list" id="request-list" aria-live="polite">
+        <div class="empty-state">Enter your admin token to load verification requests.</div>
+      </section>
+    </main>
+
+    <script>
+      const tokenForm = document.querySelector("#token-form");
+      const tokenInput = document.querySelector("#admin-token");
+      const requestList = document.querySelector("#request-list");
+      const savedToken = sessionStorage.getItem("energy-agora.admin-token") || "";
+
+      if (savedToken) {
+        tokenInput.value = savedToken;
+        loadRequests(savedToken);
+      }
+
+      tokenForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const token = tokenInput.value.trim();
+        if (!token) return;
+        sessionStorage.setItem("energy-agora.admin-token", token);
+        loadRequests(token);
+      });
+
+      async function loadRequests(token) {
+        requestList.innerHTML = '<div class="empty-state">Loading verification requests...</div>';
+        const response = await fetch(`/api/listing-requests?adminToken=${encodeURIComponent(token)}`);
+        const requests = await response.json().catch(() => []);
+
+        if (!response.ok) {
+          requestList.innerHTML = '<div class="empty-state">Could not load requests. Check the admin token.</div>';
+          return;
+        }
+
+        if (!requests.length) {
+          requestList.innerHTML = '<div class="empty-state">No listing requests yet.</div>';
+          return;
+        }
+
+        requestList.innerHTML = requests.map(getRequestMarkup).join("");
+        requestList.querySelectorAll("[data-approve-url]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            button.disabled = true;
+            button.textContent = "Approving...";
+            await fetch(button.dataset.approveUrl);
+            await loadRequests(token);
+          });
+        });
+      }
+
+      function getRequestMarkup(request) {
+        const profile = request.profile || {};
+        const isApproved = request.status === "Approved";
+        const goals = Array.isArray(profile.listingGoals) ? profile.listingGoals.join(", ") : "Not submitted";
+        return `
+          <article class="verify-card">
+            <div class="verify-card__top">
+              <div>
+                <p class="eyebrow">${escapeHtml(request.status)}</p>
+                <h2>${escapeHtml(profile.name || request.orgName)}</h2>
+                <p>${escapeHtml(profile.city || "City not listed")}, ${escapeHtml(profile.country || request.country)}</p>
+              </div>
+              <button class="button ${isApproved ? "button--light" : "button--dark"}" type="button" data-approve-url="${escapeHtml(request.approveUrl)}" ${isApproved ? "disabled" : ""}>
+                ${isApproved ? "Approved" : "Approve"}
+              </button>
+            </div>
+            <dl class="verify-facts">
+              <div><dt>Requester email</dt><dd>${escapeHtml(request.email)}</dd></div>
+              <div><dt>Listing purpose</dt><dd>${escapeHtml(goals)}</dd></div>
+              <div><dt>Joining cost</dt><dd>${escapeHtml(profile.memberCost || "Not listed")}</dd></div>
+              <div><dt>Electricity cost</dt><dd>${escapeHtml(profile.electricityCost || "Not listed")}</dd></div>
+              <div><dt>Surplus volume</dt><dd>${escapeHtml(profile.surplusVolume || "Not listed")}</dd></div>
+              <div><dt>Business rate</dt><dd>${escapeHtml(profile.surplusRate || "Not listed")}</dd></div>
+              <div><dt>Buyer minimum</dt><dd>${escapeHtml(profile.buyerMinimum || "Not listed")}</dd></div>
+              <div><dt>Business contact</dt><dd>${escapeHtml(profile.buyerContact || "Not listed")}</dd></div>
+            </dl>
+          </article>
+        `;
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+    </script>
+  </body>
+</html>

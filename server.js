@@ -115,7 +115,7 @@ async function handleRequest(req, res) {
         sendJson(res, 401, { error: "Admin token required." });
         return;
       }
-      sendJson(res, 200, await readRecords(COLLECTIONS.requests));
+      sendJson(res, 200, await getListingRequestsForAdmin());
       return;
     }
 
@@ -359,6 +359,7 @@ async function createListingRequest(account) {
 
 async function notifyAdmin(request) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
+  const dashboardUrl = `${PUBLIC_BASE_URL}/verify.html`;
   const subject = `New Energy Agora listing request: ${request.orgName}`;
   const text = [
     "A cooperative has requested listing access on Energy Agora.",
@@ -374,6 +375,9 @@ async function notifyAdmin(request) {
     "- Search public cooperative registry or official website.",
     "- Contact the cooperative through a public channel if needed.",
     "",
+    "Review dashboard:",
+    dashboardUrl,
+    "",
     "Approve after verification:",
     approveUrl,
   ].join("\n");
@@ -382,10 +386,11 @@ async function notifyAdmin(request) {
 }
 
 async function handleApproveRequest(res, requestId, token) {
+  const isAdminApproval = token && ADMIN_TOKEN && token === ADMIN_TOKEN;
   const requests = await readRecords(COLLECTIONS.requests);
   const request = requests.find((item) => item.id === requestId);
 
-  if (!request || request.token !== token) {
+  if (!request || (request.token !== token && !isAdminApproval)) {
     sendHtml(res, 404, "Approval link not found or expired.");
     return;
   }
@@ -425,8 +430,43 @@ async function getOpenListingRequest(account) {
   );
 }
 
+async function getListingRequestsForAdmin() {
+  const [requests, profiles] = await Promise.all([
+    readRecords(COLLECTIONS.requests),
+    readRecords(COLLECTIONS.profiles),
+  ]);
+
+  return requests.map((request) => {
+    const profile = profiles.find((item) => item.accountId === request.accountId);
+    return {
+      ...publicListingRequest(request),
+      approveUrl: `/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`,
+      profile: profile
+        ? {
+            id: profile.id,
+            name: profile.name,
+            city: profile.city,
+            country: profile.country,
+            ownerEmail: profile.ownerEmail,
+            listingGoals: normaliseListingGoals(profile.listingGoals),
+            memberCost: profile.memberCost,
+            electricityCost: profile.electricityCost,
+            sellsSurplus: Boolean(profile.sellsSurplus),
+            surplusVolume: profile.surplusVolume,
+            surplusRate: profile.surplusRate,
+            buyerMinimum: profile.buyerMinimum,
+            buyerContact: profile.buyerContact,
+            submittedAt: profile.submittedAt,
+            updatedAt: profile.updatedAt,
+          }
+        : null,
+    };
+  });
+}
+
 async function notifyProfileSubmitted(request, profile) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
+  const dashboardUrl = `${PUBLIC_BASE_URL}/verify.html`;
   const subject = `Energy Agora profile ready for review: ${profile.name}`;
   const text = [
     "A cooperative profile draft has been submitted on Energy Agora.",
@@ -444,6 +484,9 @@ async function notifyProfileSubmitted(request, profile) {
     `Business rate: ${profile.surplusRate || "Not listed"}`,
     `Minimum buyer: ${profile.buyerMinimum || "Not listed"}`,
     `Business contact: ${profile.buyerContact || "Not listed"}`,
+    "",
+    "Review dashboard:",
+    dashboardUrl,
     "",
     "Approve after verification:",
     approveUrl,

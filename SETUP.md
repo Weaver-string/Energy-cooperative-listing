@@ -77,6 +77,25 @@ Do not rely on local JSON files for a permanent hosted site. Hosted services can
 4. You receive a profile review email with an approval link.
 5. Opening the approval link marks the account as verified and publishes the profile online.
 
+Admin review page:
+
+```text
+https://your-vercel-url.vercel.app/verify.html
+```
+
+Paste `ADMIN_TOKEN` into that page to see pending requests and approve them manually. The token is kept only in the current browser tab.
+
+For live Gmail notifications, set these Vercel environment variables and redeploy:
+
+```text
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM=Energy Agora <your_verified_sender>
+ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
+PUBLIC_BASE_URL=https://your-vercel-url.vercel.app
+```
+
+Without `RESEND_API_KEY`, the online site still accepts requests, but approval emails will not be delivered to Gmail. Locally, email drafts are saved to `data/outbox/`.
+
 ## Authentication
 
 Energy Agora uses its own backend auth flow. Keep Neon Auth turned off unless you intentionally decide to rebuild login around Neon later.
