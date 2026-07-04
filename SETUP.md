@@ -75,18 +75,6 @@ Do not rely on local JSON files for a permanent hosted site. Hosted services can
 4. You receive a profile review email with an approval link.
 5. Opening the approval link marks the account as verified and publishes the profile online.
 
-## Google Search
-
-Energy Agora exposes `robots.txt`, `sitemap.xml`, homepage metadata, and crawlable public co-op profile pages at `/coops/:id`.
-
-After deployment, submit this sitemap in Google Search Console:
-
-```text
-https://energy-cooperative-listing.vercel.app/sitemap.xml
-```
-
-If you add a custom domain later, update `PUBLIC_BASE_URL`, redeploy, and submit the new domain sitemap.
-
 ## Authentication
 
 Energy Agora uses its own backend auth flow. Keep Neon Auth turned off unless you intentionally decide to rebuild login around Neon later.

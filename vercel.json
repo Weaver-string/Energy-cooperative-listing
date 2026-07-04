@@ -23,26 +23,6 @@
       "status": 404
     },
     {
-      "src": "/robots\\.txt",
-      "dest": "/api/robots"
-    },
-    {
-      "src": "/sitemap\\.xml",
-      "dest": "/api/sitemap"
-    },
-    {
-      "src": "/join",
-      "dest": "/api/list-page?list=members"
-    },
-    {
-      "src": "/buy-electricity",
-      "dest": "/api/list-page?list=surplus"
-    },
-    {
-      "src": "/coops/([^/]+)",
-      "dest": "/api/coop-page?slug=$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "/index.html"
     }

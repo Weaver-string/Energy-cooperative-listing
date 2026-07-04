@@ -108,7 +108,6 @@ body.is-focused-flow .topbar {
   color: var(--ink);
   background: transparent;
   font-weight: 820;
-  text-decoration: none;
 }
 
 .brand__mark,
@@ -258,14 +257,6 @@ body.is-focused-flow .topbar {
   margin: 0;
   font-size: clamp(1.35rem, 2.4vw, 2rem);
   line-height: 1.1;
-}
-
-.seo-list-intro h1 {
-  margin: 0;
-  font-size: clamp(2rem, 4vw, 3.7rem);
-  line-height: 1;
-  letter-spacing: 0;
-  font-weight: 780;
 }
 
 .list-intro p:not(.eyebrow) {
@@ -437,11 +428,6 @@ select {
 
 .profile-row__button:hover {
   transform: translateX(2px);
-}
-
-.seo-row-link {
-  color: inherit;
-  text-decoration: none;
 }
 
 .avatar {
@@ -642,31 +628,6 @@ select {
 
 .asset-line strong {
   text-align: right;
-}
-
-.seo-profile {
-  max-width: 860px;
-  margin: 0 auto;
-}
-
-.seo-asset-list {
-  display: grid;
-  gap: 10px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.seo-asset-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 0;
-  border-top: 1px solid var(--line);
-}
-
-.seo-asset-list span {
-  color: var(--muted);
 }
 
 .side-list {
