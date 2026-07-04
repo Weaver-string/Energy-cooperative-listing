@@ -6,7 +6,6 @@ const state = {
   country: "All",
   audience: "all",
   asset: "all",
-  openMembers: false,
   selectedId: "",
   draftPhotoUrl: "",
   user: null,
@@ -134,7 +133,6 @@ const resultCount = document.querySelector("#result-count");
 const sideCount = document.querySelector("#side-count");
 const searchInput = document.querySelector("#search");
 const assetFilter = document.querySelector("#asset-filter");
-const membersFilter = document.querySelector("#members-filter");
 const rowTemplate = document.querySelector("#profile-row-template");
 const audienceButtons = document.querySelectorAll("[data-audience]");
 const membershipSection = document.querySelector("#membership-section");
@@ -230,11 +228,6 @@ function bindEvents() {
     render();
   });
 
-  membersFilter.addEventListener("change", () => {
-    state.openMembers = membersFilter.checked;
-    render();
-  });
-
 }
 
 function renderCountryFilter() {
@@ -280,13 +273,12 @@ function getFilteredCoops() {
     const matchesAsset =
       state.asset === "all" ||
       (coop.assets || []).some((asset) => asset.type.toLowerCase() === state.asset);
-    const matchesMembers = !state.openMembers || coop.openMembers;
     const matchesAudience =
       state.audience === "all" ||
       (state.audience === "members" && listsForMembers(coop)) ||
       (state.audience === "surplus" && listsSurplus(coop));
 
-    return matchesQuery && matchesCountry && matchesAsset && matchesMembers && matchesAudience;
+    return matchesQuery && matchesCountry && matchesAsset && matchesAudience;
   });
 
   return filtered.sort((a, b) => {
