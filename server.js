@@ -252,6 +252,7 @@ async function handleProfileSubmission(req, res) {
   const body = await readBody(req);
   const profile = body.profile || {};
   const account = await getAuthenticatedAccount(req);
+  const listingGoals = normaliseListingGoals(profile.listingGoals);
 
   if (!account) {
     sendJson(res, 401, { error: "Please log in before submitting a profile." });
@@ -279,19 +280,19 @@ async function handleProfileSubmission(req, res) {
     country,
     members: toNumber(profile.members),
     capacity: toNumber(profile.capacity),
-    listingGoals: normaliseListingGoals(profile.listingGoals),
-    openMembers: Boolean(profile.openMembers),
+    listingGoals,
+    openMembers: listingGoals.includes("members") && Boolean(profile.openMembers),
     status: cleanText(profile.status) || "Open membership",
     assets: normaliseAssets(profile.assets, profile.capacity),
     needs: ["Member onboarding"],
-    memberCost: cleanText(profile.memberCost),
-    electricityCost: cleanText(profile.electricityCost),
-    sellsSurplus: Boolean(profile.sellsSurplus || normaliseListingGoals(profile.listingGoals).includes("surplus")),
-    surplusVolume: cleanText(profile.surplusVolume),
-    surplusRate: cleanText(profile.surplusRate),
-    buyerMinimum: cleanText(profile.buyerMinimum),
-    surplusAvailability: cleanText(profile.surplusAvailability),
-    buyerContact: cleanText(profile.buyerContact),
+    memberCost: listingGoals.includes("members") ? cleanText(profile.memberCost) : "",
+    electricityCost: listingGoals.includes("members") ? cleanText(profile.electricityCost) : "",
+    sellsSurplus: listingGoals.includes("surplus"),
+    surplusVolume: listingGoals.includes("surplus") ? cleanText(profile.surplusVolume) : "",
+    surplusRate: listingGoals.includes("surplus") ? cleanText(profile.surplusRate) : "",
+    buyerMinimum: listingGoals.includes("surplus") ? cleanText(profile.buyerMinimum) : "",
+    surplusAvailability: listingGoals.includes("surplus") ? cleanText(profile.surplusAvailability) : "",
+    buyerContact: listingGoals.includes("surplus") ? cleanText(profile.buyerContact) : "",
     intro: cleanText(profile.intro),
     connections: [],
     color: cleanText(profile.color) || "#0e765d",
@@ -428,7 +429,7 @@ async function notifyProfileSubmitted(request, profile) {
     `Members: ${profile.members || "Not listed"}`,
     `Joining cost: ${profile.memberCost || "Not listed"}`,
     `Electricity cost: ${profile.electricityCost || "Not listed"}`,
-    `Listing purpose: ${normaliseListingGoals(profile.listingGoals).join(", ")}`,
+    `Listing purpose: ${formatListingGoals(profile.listingGoals)}`,
     `Surplus electricity: ${profile.sellsSurplus ? "Yes" : "No"}`,
     `Surplus volume: ${profile.surplusVolume || "Not listed"}`,
     `Business rate: ${profile.surplusRate || "Not listed"}`,
@@ -846,9 +847,16 @@ function normaliseAssets(assets, capacity) {
 }
 
 function normaliseListingGoals(value) {
-  const goals = Array.isArray(value) ? value : [];
+  if (!Array.isArray(value)) return ["members"];
+  const goals = value;
   const cleanGoals = goals.filter((goal) => ["members", "surplus"].includes(goal));
-  return cleanGoals.length ? [...new Set(cleanGoals)] : ["members"];
+  return [...new Set(cleanGoals)];
+}
+
+function formatListingGoals(value) {
+  const goals = normaliseListingGoals(value);
+  if (!goals.length) return "profile only";
+  return goals.join(", ");
 }
 
 function makeProfileId(value, profiles) {

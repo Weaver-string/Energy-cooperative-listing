@@ -139,6 +139,30 @@ const rowTemplate = document.querySelector("#profile-row-template");
 const audienceButtons = document.querySelectorAll("[data-audience]");
 const membershipSection = document.querySelector("#membership-section");
 const surplusSection = document.querySelector("#surplus-section");
+const listKicker = document.querySelector("#list-kicker");
+const listTitle = document.querySelector("#list-title");
+const listDescription = document.querySelector("#list-description");
+
+const LIST_COPY = {
+  all: {
+    kicker: "All co-ops",
+    title: "All cooperative profiles",
+    description:
+      "Browse every verified cooperative on Energy Agora, including co-ops that are only publishing a profile for visibility.",
+  },
+  members: {
+    kicker: "Looking to join",
+    title: "Co-ops looking for members",
+    description:
+      "Find cooperatives that are actively open to people who want to join, compare membership costs, and understand member electricity pricing.",
+  },
+  surplus: {
+    kicker: "Looking to buy electricity",
+    title: "Co-ops open to electricity buyers",
+    description:
+      "Find cooperatives advertising surplus electricity, business rates, minimum buyer size, or potential PPA discussions.",
+  },
+};
 
 async function init() {
   state.user = await AuthProvider.getSession();
@@ -296,6 +320,10 @@ function renderShell() {
   document.body.classList.toggle("is-focused-flow", state.view === "create" || state.view === "auth");
   document.querySelector("#login-button").textContent = state.user ? "Log out" : "Log in";
   document.querySelector("#create-button").textContent = state.user ? "Edit listing" : "List a co-op";
+  const copy = LIST_COPY[state.audience] || LIST_COPY.all;
+  listKicker.textContent = copy.kicker;
+  listTitle.textContent = copy.title;
+  listDescription.textContent = copy.description;
 }
 
 function renderProfileList(coops) {
@@ -303,7 +331,8 @@ function renderProfileList(coops) {
   profileList.innerHTML = "";
 
   if (!coops.length) {
-    profileList.innerHTML = '<div class="empty-state">No cooperatives match those filters.</div>';
+    const copy = LIST_COPY[state.audience] || LIST_COPY.all;
+    profileList.innerHTML = `<div class="empty-state">No cooperatives match ${escapeHtml(copy.title.toLowerCase())} yet.</div>`;
     return;
   }
 
@@ -474,7 +503,7 @@ function showCreate() {
   state.profileSubmitted = false;
   renderCountryOptions();
   prefillProfileFromAccount();
-  updateCreateFormState();
+  updateListingPurpose();
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -521,6 +550,8 @@ function getDraftCoop() {
   const capacity = toNumber(form.get("capacity"));
   const assetValue = capacity ? `${capacity.toFixed(1)} MW` : "Not listed";
   const listingGoals = getListingGoals(form);
+  const isListingMembers = listingGoals.includes("members");
+  const isListingSurplus = listingGoals.includes("surplus");
 
   return {
     id: "draft",
@@ -531,18 +562,18 @@ function getDraftCoop() {
     members: Math.round(toNumber(form.get("members"))),
     capacity,
     listingGoals,
-    openMembers: form.get("openMembers") === "on",
+    openMembers: isListingMembers && form.get("openMembers") === "on",
     status: clean(form.get("status")) || "Open membership",
     assets: [{ type: "Member-owned energy", detail: "Cooperative portfolio", value: assetValue }],
     needs: ["Member onboarding"],
-    memberCost: clean(form.get("memberCost")),
-    electricityCost: clean(form.get("electricityCost")),
-    sellsSurplus: listingGoals.includes("surplus"),
-    surplusVolume: clean(form.get("surplusVolume")),
-    surplusRate: clean(form.get("surplusRate")),
-    buyerMinimum: clean(form.get("buyerMinimum")),
-    surplusAvailability: clean(form.get("surplusAvailability")),
-    buyerContact: clean(form.get("buyerContact")),
+    memberCost: isListingMembers ? clean(form.get("memberCost")) : "",
+    electricityCost: isListingMembers ? clean(form.get("electricityCost")) : "",
+    sellsSurplus: isListingSurplus,
+    surplusVolume: isListingSurplus ? clean(form.get("surplusVolume")) : "",
+    surplusRate: isListingSurplus ? clean(form.get("surplusRate")) : "",
+    buyerMinimum: isListingSurplus ? clean(form.get("buyerMinimum")) : "",
+    surplusAvailability: isListingSurplus ? clean(form.get("surplusAvailability")) : "",
+    buyerContact: isListingSurplus ? clean(form.get("buyerContact")) : "",
     intro:
       clean(form.get("intro")) ||
       "A short public bio will help potential members understand what this cooperative is building.",
@@ -623,9 +654,6 @@ function prefillProfileFromAccount() {
 function updateListingPurpose() {
   const memberToggle = document.querySelector("#new-list-members");
   const surplusToggle = document.querySelector("#new-list-surplus");
-  if (!memberToggle.checked && !surplusToggle.checked) {
-    memberToggle.checked = true;
-  }
 
   membershipSection.classList.toggle("field-hidden", !memberToggle.checked);
   surplusSection.classList.toggle("field-hidden", !surplusToggle.checked);
@@ -644,11 +672,11 @@ function getListingGoals(form) {
   const goals = [];
   if (form.get("listingMembers") === "on") goals.push("members");
   if (form.get("listingSurplus") === "on") goals.push("surplus");
-  return goals.length ? goals : ["members"];
+  return goals;
 }
 
 function listsForMembers(coop) {
-  return !Array.isArray(coop.listingGoals) || coop.listingGoals.includes("members");
+  return !Array.isArray(coop.listingGoals) ? true : coop.listingGoals.includes("members");
 }
 
 function listsSurplus(coop) {
@@ -659,7 +687,7 @@ function getPurposeText(coop) {
   const purposes = [];
   if (listsForMembers(coop)) purposes.push("Members");
   if (listsSurplus(coop)) purposes.push("Surplus power");
-  return purposes.join(" + ") || "Co-op profile";
+  return purposes.join(" + ") || "Profile only";
 }
 
 function getRowMeta(coop) {
@@ -670,6 +698,10 @@ function getRowMeta(coop) {
 
   if (state.audience === "all" && listsSurplus(coop) && !listsForMembers(coop)) {
     return `${location} / Electricity buyers / ${coop.surplusRate || "Rate not listed"}`;
+  }
+
+  if (!listsForMembers(coop)) {
+    return `${location} / Profile only / ${Number(coop.capacity || 0).toFixed(1)} MW owned capacity`;
   }
 
   return `${location} / ${formatNumber.format(coop.members || 0)} members / ${coop.memberCost || "Joining cost not listed"} / ${coop.electricityCost || "Power price not listed"}`;

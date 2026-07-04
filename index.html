@@ -37,9 +37,15 @@
           <img src="assets/network-illustration.png" alt="Illustration of connected renewable energy cooperative profiles" />
         </section>
 
+        <section class="list-intro" aria-live="polite">
+          <p class="eyebrow" id="list-kicker">All co-ops</p>
+          <h2 id="list-title">All cooperative profiles</h2>
+          <p id="list-description">Browse every verified cooperative on Energy Agora, including co-ops that are only publishing a profile for visibility.</p>
+        </section>
+
         <section class="browse-controls" aria-label="Browse filters">
           <div class="audience-switch" aria-label="Browsing mode">
-            <button type="button" data-audience="all" aria-pressed="true">All</button>
+            <button type="button" data-audience="all" aria-pressed="true">All co-ops</button>
             <button type="button" data-audience="members">Looking to join</button>
             <button type="button" data-audience="surplus">Looking to buy electricity</button>
           </div>
@@ -146,7 +152,7 @@
               </button>
               <p class="eyebrow">Create profile</p>
               <h1 id="create-title">Set up your co-op profile.</h1>
-              <p>Choose whether this profile is for attracting members, selling surplus electricity, or both.</p>
+              <p>Choose whether this profile is for attracting members, selling surplus electricity, both, or simply being listed.</p>
             </div>
 
             <section class="form-section">
@@ -201,7 +207,7 @@
               <h2>Listing purpose</h2>
               <div class="field-grid">
                 <label class="checkbox-field">
-                  <input id="new-list-members" name="listingMembers" type="checkbox" checked />
+                  <input id="new-list-members" name="listingMembers" type="checkbox" />
                   <span>Attract household members</span>
                 </label>
                 <label class="checkbox-field">
@@ -209,6 +215,7 @@
                   <span>Sell surplus electricity</span>
                 </label>
               </div>
+              <p class="form-note">Choose either, both, or neither. If neither is selected, the co-op appears only in the all co-ops list.</p>
             </section>
 
             <section class="form-section" id="membership-section">
