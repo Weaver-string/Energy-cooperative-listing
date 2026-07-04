@@ -31,7 +31,7 @@
             <p class="eyebrow">Member-owned energy</p>
             <h1 id="browse-title">Find a co-op you'd actually join.</h1>
             <p>
-              Compare co-ops for household membership or business surplus electricity buying.
+              Compare co-ops to join as a member or buy surplus electricity from.
             </p>
           </div>
           <img src="assets/network-illustration.png" alt="Illustration of connected renewable energy cooperative profiles" />
@@ -40,8 +40,8 @@
         <section class="browse-controls" aria-label="Browse filters">
           <div class="audience-switch" aria-label="Browsing mode">
             <button type="button" data-audience="all" aria-pressed="true">All</button>
-            <button type="button" data-audience="members">Households</button>
-            <button type="button" data-audience="surplus">Business buyers</button>
+            <button type="button" data-audience="members">Looking to join</button>
+            <button type="button" data-audience="surplus">Looking to buy electricity</button>
           </div>
           <div class="chip-group" id="country-filter" aria-label="Country filters"></div>
           <select id="asset-filter" aria-label="Filter by asset type">
@@ -55,11 +55,6 @@
             <input id="members-filter" type="checkbox" />
             <span>Open to members</span>
           </label>
-          <select id="sort-filter" aria-label="Sort profiles">
-            <option value="match">Best match</option>
-            <option value="capacity">Largest capacity</option>
-            <option value="members">Members</option>
-          </select>
         </section>
 
         <div class="list-heading">
@@ -264,7 +259,7 @@
               </div>
               <label class="wide-field">
                 <span>Availability notes</span>
-                <textarea id="new-surplus-availability" name="surplusAvailability" rows="3" placeholder="Seasonality, contract type, location limits, or other conditions for business buyers."></textarea>
+                <textarea id="new-surplus-availability" name="surplusAvailability" rows="3" placeholder="Seasonality, contract type, location limits, or other conditions for electricity buyers."></textarea>
               </label>
             </section>
 

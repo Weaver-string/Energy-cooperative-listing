@@ -7,7 +7,6 @@ const state = {
   audience: "all",
   asset: "all",
   openMembers: false,
-  sort: "match",
   selectedId: "",
   draftPhotoUrl: "",
   user: null,
@@ -136,7 +135,6 @@ const sideCount = document.querySelector("#side-count");
 const searchInput = document.querySelector("#search");
 const assetFilter = document.querySelector("#asset-filter");
 const membersFilter = document.querySelector("#members-filter");
-const sortFilter = document.querySelector("#sort-filter");
 const rowTemplate = document.querySelector("#profile-row-template");
 const audienceButtons = document.querySelectorAll("[data-audience]");
 const membershipSection = document.querySelector("#membership-section");
@@ -213,10 +211,6 @@ function bindEvents() {
     render();
   });
 
-  sortFilter.addEventListener("change", () => {
-    state.sort = sortFilter.value;
-    render();
-  });
 }
 
 function renderCountryFilter() {
@@ -272,8 +266,6 @@ function getFilteredCoops() {
   });
 
   return filtered.sort((a, b) => {
-    if (state.sort === "capacity") return b.capacity - a.capacity;
-    if (state.sort === "members") return b.members - a.members;
     return a.name.localeCompare(b.name);
   });
 }
@@ -354,7 +346,7 @@ function getProfileMarkup(coop, isPreview) {
   const memberSection = listsForMembers(coop)
     ? `
       <section class="detail-section">
-        <h2>For households</h2>
+        <h2>For people looking to join</h2>
         <div class="profile-meta-grid profile-meta-grid--compact">
           <div class="detail-stat"><span>Joining cost</span><strong>${escapeHtml(memberCost)}</strong></div>
           <div class="detail-stat"><span>Electricity cost</span><strong>${escapeHtml(electricityCost)}</strong></div>
@@ -366,7 +358,7 @@ function getProfileMarkup(coop, isPreview) {
   const surplusSectionMarkup = listsSurplus(coop)
     ? `
       <section class="detail-section">
-        <h2>For business buyers</h2>
+        <h2>For buyers looking for electricity</h2>
         <div class="profile-meta-grid profile-meta-grid--compact">
           <div class="detail-stat"><span>Available surplus</span><strong>${escapeHtml(coop.surplusVolume || "Not listed")}</strong></div>
           <div class="detail-stat"><span>Business rate</span><strong>${escapeHtml(coop.surplusRate || "Not listed")}</strong></div>
@@ -677,7 +669,7 @@ function getRowMeta(coop) {
   }
 
   if (state.audience === "all" && listsSurplus(coop) && !listsForMembers(coop)) {
-    return `${location} / Business buyers / ${coop.surplusRate || "Rate not listed"}`;
+    return `${location} / Electricity buyers / ${coop.surplusRate || "Rate not listed"}`;
   }
 
   return `${location} / ${formatNumber.format(coop.members || 0)} members / ${coop.memberCost || "Joining cost not listed"} / ${coop.electricityCost || "Power price not listed"}`;
