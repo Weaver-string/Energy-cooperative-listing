@@ -32,15 +32,15 @@
     },
     {
       "src": "/join",
-      "dest": "/api/seo-join"
+      "dest": "/api/list-page?list=members"
     },
     {
       "src": "/buy-electricity",
-      "dest": "/api/seo-buy-electricity"
+      "dest": "/api/list-page?list=surplus"
     },
     {
       "src": "/coops/([^/]+)",
-      "dest": "/api/coops/$1"
+      "dest": "/api/coop-page?slug=$1"
     },
     {
       "src": "/(.*)",
