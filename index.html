@@ -94,12 +94,17 @@
                 Back to browse
               </button>
               <p class="eyebrow">Co-op account</p>
-              <h1 id="auth-title">Request access or log in.</h1>
-              <p>Use a secure account to draft your profile. New requests are reviewed manually before the cooperative is marked verified or appears publicly.</p>
+              <h1 id="auth-title">Log in to your co-op account.</h1>
+              <p id="auth-copy">Returning co-ops can log in with just an email and password, then continue editing their profile.</p>
+            </div>
+
+            <div class="auth-switch" aria-label="Account action">
+              <button type="button" data-auth-mode="login" aria-pressed="true">Log in</button>
+              <button type="button" data-auth-mode="request" aria-pressed="false">Request access</button>
             </div>
 
             <section class="form-section">
-              <h2>Account details</h2>
+              <h2 id="auth-account-heading">Log in</h2>
               <div class="field-grid">
                 <label>
                   <span>Email</span>
@@ -109,18 +114,18 @@
                   <span>Password</span>
                   <input id="auth-password" name="password" type="password" placeholder="Minimum 8 characters" minlength="8" required />
                 </label>
-                <label>
+                <label data-request-only>
                   <span>Organization name</span>
-                  <input id="auth-org-name" name="orgName" type="text" placeholder="River Solar Cooperative" required />
+                  <input id="auth-org-name" name="orgName" type="text" placeholder="River Solar Cooperative" />
                 </label>
-                <label>
+                <label data-request-only>
                   <span>Country</span>
-                  <input id="auth-country" name="country" type="text" list="country-options" placeholder="Netherlands" required />
+                  <input id="auth-country" name="country" type="text" list="country-options" placeholder="Netherlands" />
                 </label>
               </div>
             </section>
 
-            <section class="form-section">
+            <section class="form-section" data-request-only>
               <h2>Manual verification</h2>
               <p class="form-note">After the profile is submitted, we review the cooperative name, email, public website or records, and any follow-up correspondence. Until then, the profile is labeled pending verification.</p>
               <p class="form-note">A listing-access request email is sent to the Energy Agora review inbox so an admin can verify who they are.</p>
@@ -140,7 +145,7 @@
             </section>
 
             <div class="form-actions">
-              <button class="button button--dark" type="submit">Continue securely</button>
+              <button class="button button--dark" id="auth-submit-button" type="submit">Log in</button>
             </div>
           </form>
         </div>

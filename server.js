@@ -19,7 +19,7 @@ const RESEND_FROM = process.env.RESEND_FROM || "Energy Agora <onboarding@resend.
 const DATABASE_URL = process.env.DATABASE_URL || "";
 const USE_DATABASE = Boolean(DATABASE_URL);
 const SESSION_COOKIE = "ea_session";
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 const PASSWORD_RESET_MAX_AGE_MS = 1000 * 60 * 30;
 let dbPool = null;
 let storageReadyPromise = null;
@@ -262,7 +262,13 @@ async function handleLogout(req, res) {
 }
 
 async function handleSession(req, res) {
-  const account = await getAuthenticatedAccount(req);
+  const auth = await getAuthenticatedSession(req);
+  const account = auth?.account || null;
+  if (auth) {
+    auth.session.expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
+    await writeRecords(COLLECTIONS.sessions, pruneExpiredSessions(auth.sessions));
+    setSessionCookie(res, auth.token);
+  }
   sendJson(res, 200, { account: account ? publicAccount(account) : null });
 }
 
@@ -862,6 +868,11 @@ async function createSession(res, account) {
 }
 
 async function getAuthenticatedAccount(req) {
+  const auth = await getAuthenticatedSession(req);
+  return auth?.account || null;
+}
+
+async function getAuthenticatedSession(req) {
   const token = getCookie(req, SESSION_COOKIE);
   if (!token) return null;
 
@@ -874,7 +885,8 @@ async function getAuthenticatedAccount(req) {
   if (!session) return null;
 
   const accounts = await readRecords(COLLECTIONS.accounts);
-  return accounts.find((account) => account.id === session.accountId) || null;
+  const account = accounts.find((item) => item.id === session.accountId) || null;
+  return account ? { account, session, sessions, token } : null;
 }
 
 async function revokeSession(req) {

@@ -11,6 +11,7 @@ const state = {
   user: null,
   pendingProfile: null,
   profileSubmitted: false,
+  authMode: "login",
 };
 
 const EUROPEAN_COUNTRIES = [
@@ -87,6 +88,21 @@ const AuthProvider = {
     };
   },
 
+  async login({ email, password }) {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not log in.");
+    }
+
+    return payload.account;
+  },
+
   async requestPasswordReset(email) {
     const response = await fetch("/api/auth/request-password-reset", {
       method: "POST",
@@ -154,6 +170,14 @@ const surplusSection = document.querySelector("#surplus-section");
 const listKicker = document.querySelector("#list-kicker");
 const listTitle = document.querySelector("#list-title");
 const listDescription = document.querySelector("#list-description");
+const authModeButtons = document.querySelectorAll("[data-auth-mode]");
+const requestOnlyFields = document.querySelectorAll("[data-request-only]");
+const authTitle = document.querySelector("#auth-title");
+const authCopy = document.querySelector("#auth-copy");
+const authAccountHeading = document.querySelector("#auth-account-heading");
+const authSubmitButton = document.querySelector("#auth-submit-button");
+const authOrgName = document.querySelector("#auth-org-name");
+const authCountry = document.querySelector("#auth-country");
 
 const LIST_COPY = {
   all: {
@@ -220,6 +244,10 @@ function bindEvents() {
   document.querySelector("#new-photo").addEventListener("change", handlePhotoUpload);
   document.querySelector("#new-list-members").addEventListener("change", updateListingPurpose);
   document.querySelector("#new-list-surplus").addEventListener("change", updateListingPurpose);
+
+  authModeButtons.forEach((button) => {
+    button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
+  });
 
   audienceButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -327,6 +355,7 @@ function renderShell() {
   document.body.classList.toggle("is-focused-flow", state.view === "create" || state.view === "auth");
   document.querySelector("#login-button").textContent = state.user ? "Log out" : "Log in";
   document.querySelector("#create-button").textContent = state.user ? "Edit listing" : "List a co-op";
+  renderAuthMode();
   const copy = LIST_COPY[state.audience] || LIST_COPY.all;
   listKicker.textContent = copy.kicker;
   listTitle.textContent = copy.title;
@@ -477,7 +506,7 @@ function showBrowse(shouldRender = true) {
 
 async function handleLoginButton() {
   if (!state.user) {
-    showAuth();
+    showAuth("login");
     return;
   }
 
@@ -489,8 +518,9 @@ async function handleLoginButton() {
   showBrowse();
 }
 
-function showAuth() {
+function showAuth(mode = "login") {
   state.view = "auth";
+  setAuthMode(mode, false);
   renderCountryOptions();
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -502,7 +532,7 @@ function beginProfileSetup() {
     showCreate();
     return;
   }
-  showAuth();
+  showAuth("request");
 }
 
 function showCreate() {
@@ -633,20 +663,48 @@ function resetCreateForm() {
 async function handleAuthSubmit(event) {
   event.preventDefault();
   const form = new FormData(authForm);
+  const email = clean(form.get("email"));
+  const password = clean(form.get("password"));
 
   try {
-    state.user = await AuthProvider.requestAccess({
-      email: clean(form.get("email")),
-      password: clean(form.get("password")),
-      orgName: clean(form.get("orgName")),
-      country: clean(form.get("country")),
-    });
+    state.user =
+      state.authMode === "login"
+        ? await AuthProvider.login({ email, password })
+        : await AuthProvider.requestAccess({
+            email,
+            password,
+            orgName: clean(form.get("orgName")),
+            country: clean(form.get("country")),
+          });
   } catch (error) {
     window.alert(error.message);
     return;
   }
 
   showCreate();
+}
+
+function setAuthMode(mode, shouldRender = true) {
+  state.authMode = mode === "request" ? "request" : "login";
+  authOrgName.required = state.authMode === "request";
+  authCountry.required = state.authMode === "request";
+  if (shouldRender) renderAuthMode();
+}
+
+function renderAuthMode() {
+  const isRequestMode = state.authMode === "request";
+  authModeButtons.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.authMode === state.authMode));
+  });
+  requestOnlyFields.forEach((element) => {
+    element.classList.toggle("is-hidden", !isRequestMode);
+  });
+  authTitle.textContent = isRequestMode ? "Request listing access." : "Log in to your co-op account.";
+  authCopy.textContent = isRequestMode
+    ? "Create a secure account to draft your profile. New requests are reviewed manually before the cooperative is marked verified or appears publicly."
+    : "Returning co-ops can log in with just an email and password, then continue editing their profile.";
+  authAccountHeading.textContent = isRequestMode ? "Account details" : "Log in";
+  authSubmitButton.textContent = isRequestMode ? "Request access" : "Log in";
 }
 
 async function handlePasswordResetRequest() {

@@ -82,6 +82,7 @@ Energy Agora uses its own backend auth flow. Keep Neon Auth turned off unless yo
 - Passwords are stored as salted `scrypt` hashes.
 - Login state is stored in server-side sessions.
 - Browsers receive an HttpOnly `ea_session` cookie, not account data in localStorage.
+- Sessions are long-lived and refreshed when the app loads, so co-ops stay logged in unless they sign out or clear browser cookies.
 - Profile submission requires a valid session cookie.
 - New accounts remain `Pending manual review` until you approve them from the email link.
 - Login, signup, and password reset requests are rate limited.

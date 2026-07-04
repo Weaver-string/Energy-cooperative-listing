@@ -81,6 +81,7 @@ body.is-focused-flow .topbar {
 .global-search,
 .browse-controls,
 .audience-switch,
+.auth-switch,
 .list-intro,
 .chip-group,
 .toggle,
@@ -285,6 +286,32 @@ body.is-focused-flow .topbar {
 }
 
 .audience-switch button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--ink);
+}
+
+.auth-switch {
+  width: fit-content;
+  gap: 4px;
+  min-height: 40px;
+  margin: 0 0 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.auth-switch button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 850;
+}
+
+.auth-switch button[aria-pressed="true"] {
   color: #fff;
   background: var(--ink);
 }
