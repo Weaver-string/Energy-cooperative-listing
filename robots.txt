@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /reset.html
+Disallow: /verify.html
+Sitemap: https://energy-cooperative-listing.vercel.app/sitemap.xml

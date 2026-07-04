@@ -201,11 +201,20 @@ const LIST_COPY = {
 };
 
 async function init() {
+  applyInitialRoute();
   state.user = await AuthProvider.getSession();
   renderCountryFilter();
   bindEvents();
   render();
   await loadOnlineProfiles();
+}
+
+function applyInitialRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const query = clean(params.get("q"));
+  if (!query) return;
+  state.query = query.toLowerCase();
+  if (searchInput) searchInput.value = query;
 }
 
 async function loadOnlineProfiles() {
