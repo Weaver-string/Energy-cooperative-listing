@@ -885,6 +885,10 @@ select {
   border-top: 1px solid var(--line);
 }
 
+.form-inline-action {
+  margin-top: 14px;
+}
+
 .verification-confirm {
   margin-top: 16px;
 }

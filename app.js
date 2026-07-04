@@ -87,6 +87,20 @@ const AuthProvider = {
     };
   },
 
+  async requestPasswordReset(email) {
+    const response = await fetch("/api/auth/request-password-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not request a password reset.");
+    }
+    return payload.message || "If an account exists for that email, a password reset link has been sent.";
+  },
+
   async signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
   },
@@ -197,6 +211,7 @@ function bindEvents() {
   document.querySelector("#create-back-button").addEventListener("click", showBrowse);
   document.querySelector("#confirmation-back-button").addEventListener("click", showBrowse);
   document.querySelector("#reset-profile-button").addEventListener("click", resetCreateForm);
+  document.querySelector("#password-reset-button").addEventListener("click", handlePasswordResetRequest);
 
   authForm.addEventListener("submit", handleAuthSubmit);
   profileForm.addEventListener("input", updateCreateFormState);
@@ -632,6 +647,21 @@ async function handleAuthSubmit(event) {
   }
 
   showCreate();
+}
+
+async function handlePasswordResetRequest() {
+  const email = clean(document.querySelector("#auth-email").value);
+  if (!email) {
+    window.alert("Enter the account email first, then request a reset link.");
+    return;
+  }
+
+  try {
+    const message = await AuthProvider.requestPasswordReset(email);
+    window.alert(message);
+  } catch (error) {
+    window.alert(error.message);
+  }
 }
 
 function prefillProfileFromAccount() {

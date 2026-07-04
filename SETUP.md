@@ -16,7 +16,7 @@ Without `RESEND_API_KEY`, notification emails are saved under `data/outbox/` so 
 
 ## Make It Accessible Online
 
-The app is now deployable as a single Node web service: it serves the website, stores profile/account requests, sends verification emails, and publishes approved profiles.
+The app is now deployable as a single Node web service: it serves the website, stores profile/account requests, sends private review emails, handles password resets, and publishes approved profiles.
 
 Recommended no-card stack:
 
@@ -43,6 +43,7 @@ ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
 
 After the first deployment, copy the generated Vercel URL back into `PUBLIC_BASE_URL`, then redeploy. Approval links use this value.
 Vercel requires `DATABASE_URL`; the serverless filesystem should not be used for account/profile data.
+Resend is required on Vercel for real emails, including your private approval emails and user password reset links.
 
 ### Render
 
@@ -83,6 +84,8 @@ Energy Agora uses its own backend auth flow. Keep Neon Auth turned off unless yo
 - Browsers receive an HttpOnly `ea_session` cookie, not account data in localStorage.
 - Profile submission requires a valid session cookie.
 - New accounts remain `Pending manual review` until you approve them from the email link.
+- Login, signup, and password reset requests are rate limited.
+- Password reset links are emailed privately and expire after 30 minutes.
 - State-changing requests check the browser origin to reduce CSRF risk.
 
 ## Useful Endpoints
@@ -93,6 +96,8 @@ GET  /api/health
 GET  /api/cooperatives
 POST /api/auth/request-access
 POST /api/auth/login
+POST /api/auth/request-password-reset
+POST /api/auth/reset-password
 POST /api/auth/logout
 GET  /api/auth/session
 POST /api/profiles

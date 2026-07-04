@@ -20,8 +20,10 @@ const DATABASE_URL = process.env.DATABASE_URL || "";
 const USE_DATABASE = Boolean(DATABASE_URL);
 const SESSION_COOKIE = "ea_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
+const PASSWORD_RESET_MAX_AGE_MS = 1000 * 60 * 30;
 let dbPool = null;
 let storageReadyPromise = null;
+const rateLimitBuckets = new Map();
 
 const COLLECTIONS = {
   accounts: "accounts",
@@ -75,6 +77,16 @@ async function handleRequest(req, res) {
 
     if (req.method === "POST" && url.pathname === "/api/auth/login") {
       await handleLogin(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/auth/request-password-reset") {
+      await handlePasswordResetRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/auth/reset-password") {
+      await handlePasswordReset(req, res);
       return;
     }
 
@@ -148,6 +160,9 @@ async function handleAccessRequest(req, res) {
   const orgName = String(body.orgName || "").trim();
   const country = String(body.country || "").trim();
 
+  if (!checkRateLimit(req, res, "access-ip", 30, 15 * 60 * 1000)) return;
+  if (!checkRateLimit(req, res, `access:${email || "unknown"}`, 6, 15 * 60 * 1000)) return;
+
   if (!email || !password || !orgName || !country) {
     sendJson(res, 400, { error: "Email, password, cooperative name, and country are required." });
     return;
@@ -210,6 +225,9 @@ async function handleLogin(req, res) {
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
 
+  if (!checkRateLimit(req, res, "login-ip", 30, 15 * 60 * 1000)) return;
+  if (!checkRateLimit(req, res, `login:${email || "unknown"}`, 8, 15 * 60 * 1000)) return;
+
   if (!email || !password) {
     sendJson(res, 400, { error: "Email and password are required." });
     return;
@@ -246,6 +264,81 @@ async function handleLogout(req, res) {
 async function handleSession(req, res) {
   const account = await getAuthenticatedAccount(req);
   sendJson(res, 200, { account: account ? publicAccount(account) : null });
+}
+
+async function handlePasswordResetRequest(req, res) {
+  const body = await readBody(req);
+  const email = String(body.email || "").trim().toLowerCase();
+
+  if (!checkRateLimit(req, res, "reset-request-ip", 10, 60 * 60 * 1000)) return;
+  if (!checkRateLimit(req, res, `reset-request:${email || "unknown"}`, 4, 60 * 60 * 1000)) return;
+
+  if (!email) {
+    sendJson(res, 400, { error: "Email is required." });
+    return;
+  }
+
+  const accounts = await readRecords(COLLECTIONS.accounts);
+  const account = accounts.find((item) => item.email === email);
+  if (account) {
+    await sendPasswordReset(account, accounts);
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    message: "If an account exists for that email, a password reset link has been sent.",
+  });
+}
+
+async function handlePasswordReset(req, res) {
+  const body = await readBody(req);
+  const accountId = String(body.account || "").trim();
+  const token = String(body.token || "");
+  const password = String(body.password || "");
+
+  if (!checkRateLimit(req, res, "reset-ip", 20, 60 * 60 * 1000)) return;
+  if (!checkRateLimit(req, res, `reset:${accountId || getClientIp(req)}`, 6, 60 * 60 * 1000)) return;
+
+  if (!accountId || !token || !password) {
+    sendJson(res, 400, { error: "Reset token and new password are required." });
+    return;
+  }
+
+  if (password.length < 8) {
+    sendJson(res, 400, { error: "Password must be at least 8 characters." });
+    return;
+  }
+
+  const accounts = await readRecords(COLLECTIONS.accounts);
+  const account = accounts.find((item) => item.id === accountId);
+  if (!account || !account.passwordResetTokenHash) {
+    sendJson(res, 400, { error: "This password reset link is invalid or has already been used." });
+    return;
+  }
+
+  if (Date.parse(account.passwordResetExpiresAt || "") < Date.now()) {
+    sendJson(res, 400, { error: "This password reset link has expired." });
+    return;
+  }
+
+  if (!timingSafeEqualText(hashToken(token), account.passwordResetTokenHash)) {
+    sendJson(res, 400, { error: "This password reset link is invalid or has already been used." });
+    return;
+  }
+
+  account.passwordHash = await hashPassword(password);
+  delete account.passwordResetTokenHash;
+  delete account.passwordResetExpiresAt;
+  await writeRecords(COLLECTIONS.accounts, accounts);
+
+  const sessions = await readRecords(COLLECTIONS.sessions);
+  await writeRecords(
+    COLLECTIONS.sessions,
+    sessions.filter((session) => session.accountId !== account.id),
+  );
+
+  clearSessionCookie(res);
+  sendJson(res, 200, { ok: true, message: "Password updated. Please log in with your new password." });
 }
 
 async function handleProfileSubmission(req, res) {
@@ -369,7 +462,13 @@ async function notifyAdmin(request) {
     approveUrl,
   ].join("\n");
 
-  await sendAdminEmail(subject, text, `${request.id}.eml`);
+  await sendAdminEmail(subject, text, `${request.id}.eml`, getEmailMarkup(
+    "New listing request",
+    `A cooperative has requested listing access: ${escapeHtml(request.orgName)}.`,
+    "Approve after verification",
+    approveUrl,
+    "Only use this link after you manually verify that the requester is associated with the cooperative.",
+  ));
 }
 
 async function handleApproveRequest(res, requestId, token) {
@@ -416,6 +515,39 @@ async function getOpenListingRequest(account) {
   );
 }
 
+async function sendPasswordReset(account, accounts) {
+  const token = crypto.randomBytes(32).toString("base64url");
+  account.passwordResetTokenHash = hashToken(token);
+  account.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_MAX_AGE_MS).toISOString();
+  await writeRecords(COLLECTIONS.accounts, accounts);
+
+  const resetUrl = `${PUBLIC_BASE_URL}/reset.html?account=${encodeURIComponent(account.id)}&token=${encodeURIComponent(token)}`;
+  const subject = "Reset your Energy Agora password";
+  const text = [
+    `Hi ${account.orgName || "there"},`,
+    "",
+    "Use this link to reset your Energy Agora password:",
+    resetUrl,
+    "",
+    "This link expires in 30 minutes. If you did not request a reset, you can ignore this email.",
+  ].join("\n");
+  const html = getEmailMarkup(
+    "Reset your password",
+    "Use this private link to choose a new password for your Energy Agora account.",
+    "Reset password",
+    resetUrl,
+    "This link expires in 30 minutes. If you did not request it, you can ignore this email.",
+  );
+
+  await sendEmail({
+    to: account.email,
+    subject,
+    text,
+    html,
+    fallbackFileName: `password-reset-${account.id}.eml`,
+  });
+}
+
 async function notifyProfileSubmitted(request, profile) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
   const subject = `Energy Agora profile ready for review: ${profile.name}`;
@@ -440,10 +572,26 @@ async function notifyProfileSubmitted(request, profile) {
     approveUrl,
   ].join("\n");
 
-  await sendAdminEmail(subject, text, `profile-${request.id}.eml`);
+  await sendAdminEmail(subject, text, `profile-${request.id}.eml`, getEmailMarkup(
+    "Profile ready for review",
+    `${escapeHtml(profile.name)} submitted a profile draft. Review the details in this email before approving.`,
+    "Approve after verification",
+    approveUrl,
+    "Only use this link after you manually verify that the requester is associated with the cooperative.",
+  ));
 }
 
-async function sendAdminEmail(subject, text, fallbackFileName) {
+async function sendAdminEmail(subject, text, fallbackFileName, html = "") {
+  await sendEmail({
+    to: ADMIN_EMAIL,
+    subject,
+    text,
+    html,
+    fallbackFileName,
+  });
+}
+
+async function sendEmail({ to, subject, text, html = "", fallbackFileName }) {
   if (RESEND_API_KEY) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -453,9 +601,10 @@ async function sendAdminEmail(subject, text, fallbackFileName) {
       },
       body: JSON.stringify({
         from: RESEND_FROM,
-        to: ADMIN_EMAIL,
+        to,
         subject,
         text,
+        html: html || undefined,
       }),
     });
 
@@ -467,19 +616,68 @@ async function sendAdminEmail(subject, text, fallbackFileName) {
   }
 
   if (USE_DATABASE) {
-    console.warn("RESEND_API_KEY is not set; admin email was not sent.");
-    console.warn(`${subject}\n${text}`);
+    console.warn("RESEND_API_KEY is not set; email was not sent.");
+    console.warn(`${subject}\nTo: ${to}\n${text}`);
     return;
   }
 
   const eml = [
-    `To: ${ADMIN_EMAIL}`,
+    `To: ${to}`,
     `Subject: ${subject}`,
     "Content-Type: text/plain; charset=utf-8",
     "",
     text,
   ].join("\n");
   fs.writeFileSync(path.join(OUTBOX_DIR, fallbackFileName), eml);
+}
+
+function checkRateLimit(req, res, scope, limit, windowMs) {
+  const now = Date.now();
+  const clientIp = getClientIp(req);
+  const key = `${scope}:${clientIp}`;
+  const bucket = rateLimitBuckets.get(key);
+
+  for (const [bucketKey, value] of rateLimitBuckets) {
+    if (value.resetAt <= now) rateLimitBuckets.delete(bucketKey);
+  }
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (bucket.count >= limit) {
+    const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+    res.setHeader("Retry-After", String(retryAfter));
+    sendJson(res, 429, { error: "Too many attempts. Please wait a little and try again." });
+    return false;
+  }
+
+  bucket.count += 1;
+  return true;
+}
+
+function getClientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwarded || req.socket?.remoteAddress || "unknown";
+}
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+function getEmailMarkup(title, intro, ctaLabel, ctaUrl, footer) {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#121614;line-height:1.5;max-width:560px">
+      <h1 style="font-size:24px;margin:0 0 12px">${escapeHtml(title)}</h1>
+      <p style="margin:0 0 20px;color:#4f5b56">${intro}</p>
+      <p style="margin:26px 0">
+        <a href="${escapeHtml(ctaUrl)}" style="background:#121614;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700;display:inline-block">${escapeHtml(ctaLabel)}</a>
+      </p>
+      <p style="margin:0 0 18px;color:#68736f;font-size:14px">${escapeHtml(footer)}</p>
+      <p style="margin:0;color:#68736f;font-size:12px">If the button does not open, copy this link: ${escapeHtml(ctaUrl)}</p>
+    </div>
+  `;
 }
 
 function serveStatic(req, res, pathname) {

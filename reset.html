@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reset password | Energy Agora</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="is-focused-flow">
+    <main class="page">
+      <section class="auth-layout" aria-labelledby="reset-title">
+        <form class="profile-form auth-form" id="reset-form">
+          <div class="form-heading">
+            <a class="back-button" href="/">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+              Back to Energy Agora
+            </a>
+            <p class="eyebrow">Account security</p>
+            <h1 id="reset-title">Choose a new password.</h1>
+            <p>Use a password with at least 8 characters. After this, log in with the new password.</p>
+          </div>
+
+          <section class="form-section">
+            <h2>New password</h2>
+            <div class="field-grid">
+              <label>
+                <span>Password</span>
+                <input id="new-password" type="password" minlength="8" autocomplete="new-password" required />
+              </label>
+              <label>
+                <span>Confirm password</span>
+                <input id="confirm-password" type="password" minlength="8" autocomplete="new-password" required />
+              </label>
+            </div>
+          </section>
+
+          <p class="form-note" id="reset-message" aria-live="polite"></p>
+
+          <div class="form-actions">
+            <button class="button button--dark" type="submit">Update password</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const account = params.get("account") || "";
+      const token = params.get("token") || "";
+      const form = document.querySelector("#reset-form");
+      const message = document.querySelector("#reset-message");
+
+      if (!account || !token) {
+        message.textContent = "This reset link is missing details. Request a new password reset from the login page.";
+        form.querySelector("button[type='submit']").disabled = true;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const password = document.querySelector("#new-password").value;
+        const confirmPassword = document.querySelector("#confirm-password").value;
+
+        if (password !== confirmPassword) {
+          message.textContent = "The passwords do not match.";
+          return;
+        }
+
+        const response = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ account, token, password }),
+        });
+        const payload = await response.json();
+        message.textContent = payload.message || payload.error || "Password updated.";
+
+        if (response.ok) {
+          form.querySelector("button[type='submit']").disabled = true;
+        }
+      });
+    </script>
+  </body>
+</html>
