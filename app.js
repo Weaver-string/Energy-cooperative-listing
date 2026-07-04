@@ -201,11 +201,22 @@ const LIST_COPY = {
 };
 
 async function init() {
+  applyInitialRoute();
   state.user = await AuthProvider.getSession();
   renderCountryFilter();
   bindEvents();
   render();
   await loadOnlineProfiles();
+}
+
+function applyInitialRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const path = window.location.pathname;
+  const query = clean(params.get("q"));
+  if (query) state.query = query.toLowerCase();
+  if (path === "/join" || params.get("list") === "members") state.audience = "members";
+  if (path === "/buy-electricity" || params.get("list") === "surplus") state.audience = "surplus";
+  if (searchInput) searchInput.value = query;
 }
 
 async function loadOnlineProfiles() {
@@ -355,6 +366,9 @@ function renderShell() {
   document.body.classList.toggle("is-focused-flow", state.view === "create" || state.view === "auth");
   document.querySelector("#login-button").textContent = state.user ? "Log out" : "Log in";
   document.querySelector("#create-button").textContent = state.user ? "Edit listing" : "List a co-op";
+  audienceButtons.forEach((item) =>
+    item.setAttribute("aria-pressed", String(item.dataset.audience === state.audience)),
+  );
   renderAuthMode();
   const copy = LIST_COPY[state.audience] || LIST_COPY.all;
   listKicker.textContent = copy.kicker;
