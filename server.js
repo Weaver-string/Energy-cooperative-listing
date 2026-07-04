@@ -73,15 +73,23 @@ async function handleRequest(req, res) {
 
     if (
       req.method === "GET" &&
-      (url.pathname === "/join" || url.pathname === "/buy-electricity" || url.pathname === "/api/list-page")
+      (url.pathname === "/join" ||
+        url.pathname === "/buy-electricity" ||
+        url.pathname === "/api/seo-join" ||
+        url.pathname === "/api/seo-buy-electricity" ||
+        url.pathname === "/api/list-page")
     ) {
-      await handleSeoListPage(res, url.pathname === "/api/list-page" ? url.searchParams.get("list") : url.pathname);
+      await handleSeoListPage(res, getSeoListType(url));
       return;
     }
 
     const coopPageMatch = url.pathname.match(/^\/coops\/([^/]+)$/);
-    if (req.method === "GET" && (coopPageMatch || url.pathname === "/api/coop-page")) {
-      await handleCoopPage(res, coopPageMatch?.[1] || url.searchParams.get("slug") || "");
+    const apiCoopPageMatch = url.pathname.match(/^\/api\/coops\/([^/]+)$/);
+    if (req.method === "GET" && (coopPageMatch || apiCoopPageMatch || url.pathname === "/api/coop-page")) {
+      await handleCoopPage(
+        res,
+        coopPageMatch?.[1] || apiCoopPageMatch?.[1] || url.searchParams.get("slug") || "",
+      );
       return;
     }
 
@@ -388,6 +396,16 @@ async function handleSeoListPage(res, list) {
     }),
     "text/html; charset=utf-8",
   );
+}
+
+function getSeoListType(url) {
+  if (url.pathname === "/buy-electricity" || url.pathname === "/api/seo-buy-electricity") {
+    return "surplus";
+  }
+  if (url.pathname === "/join" || url.pathname === "/api/seo-join") {
+    return "members";
+  }
+  return url.searchParams.get("list");
 }
 
 async function handlePasswordResetRequest(req, res) {
