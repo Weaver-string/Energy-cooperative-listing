@@ -84,7 +84,7 @@
             <button type="button" data-audience="all" aria-pressed="true">All co-ops</button>
             <button type="button" data-audience="members">Looking to join</button>
             <button type="button" data-audience="surplus">Looking to buy electricity</button>
-            <button type="button" data-audience="formation">Starting a co-op</button>
+            <button type="button" data-audience="formation">Start a co-op</button>
           </div>
           <div class="chip-group" id="country-filter" aria-label="Country filters"></div>
           <select id="asset-filter" aria-label="Filter by asset type">
@@ -208,7 +208,7 @@
                 <span class="upload-control">
                   <span class="upload-avatar" id="upload-avatar">EA</span>
                   <span>
-                    <strong>Upload logo or photo</strong>
+                    <strong>Upload logo or community photo</strong>
                     <small>Square images work best.</small>
                   </span>
                 </span>
@@ -231,12 +231,12 @@
                   <select id="new-status" name="status">
                     <option>Open membership</option>
                     <option>Recruiting members</option>
-                    <option>Seeking founding members</option>
-                    <option>Formation group</option>
+                    <option>Looking for first members</option>
+                    <option>New community group</option>
                     <option>Project pipeline</option>
                     <option>Operational</option>
                     <option>Pre-construction</option>
-                    <option>Utility liaison needed</option>
+                    <option>Looking for local partners</option>
                   </select>
                 </label>
               </div>
@@ -264,41 +264,49 @@
                 </label>
                 <label class="checkbox-field">
                   <input id="new-list-formation" name="listingFormation" type="checkbox" />
-                  <span>Start a new co-op</span>
+                  <span>Build a new co-op community</span>
                 </label>
               </div>
               <p class="form-note">Choose any that fit. If neither is selected, the co-op appears only in the all co-ops list.</p>
             </section>
 
             <section class="form-section field-hidden" id="formation-section">
-              <h2>Starting a co-op</h2>
+              <h2>Build a new co-op community</h2>
               <div class="field-grid">
                 <label>
-                  <span>Formation stage</span>
+                  <span>Where are you now?</span>
                   <select id="new-formation-stage" name="formationStage">
-                    <option>Gathering founding members</option>
-                    <option>Planning first assets</option>
-                    <option>Seeking utility introduction</option>
-                    <option>Preparing legal setup</option>
-                    <option>Looking for sites or rooftops</option>
+                    <option>Gathering interested people</option>
+                    <option>Choosing a first project</option>
+                    <option>Looking for local partners</option>
+                    <option>Preparing the co-op</option>
+                    <option>Looking for rooftops or sites</option>
                   </select>
                 </label>
                 <label>
-                  <span>Founding member target</span>
-                  <input id="new-founding-target" name="foundingMemberTarget" type="text" placeholder="100 founding members" />
+                  <span>People you hope to gather</span>
+                  <input id="new-founding-target" name="foundingMemberTarget" type="text" placeholder="100 local people interested" />
                 </label>
                 <label>
-                  <span>Planned first assets</span>
-                  <input id="new-planned-assets" name="plannedAssets" type="text" placeholder="Community solar rooftops" />
+                  <span>Early share cost</span>
+                  <input id="new-formation-share-cost" name="formationShareCost" type="text" placeholder="EUR 25 founding share or not decided yet" />
                 </label>
                 <label>
-                  <span>Utility support needed</span>
-                  <input id="new-utility-needs" name="utilityNeeds" type="text" placeholder="Grid connection, supplier partner, metering help" />
+                  <span>First project idea</span>
+                  <input id="new-planned-assets" name="plannedAssets" type="text" placeholder="Solar panels on local rooftops" />
+                </label>
+                <label>
+                  <span>Help wanted</span>
+                  <input id="new-utility-needs" name="utilityNeeds" type="text" placeholder="A local partner, a roof, advice, or more neighbors" />
                 </label>
               </div>
               <label class="wide-field">
-                <span>What help would make this co-op real?</span>
-                <textarea id="new-liaison-support" name="liaisonSupport" rows="3" placeholder="Describe the utility company, municipality, site owner, or technical partner introductions you need."></textarea>
+                <span>Community goals</span>
+                <textarea id="new-community-goals" name="communityGoals" rows="3" placeholder="Lower bills, shared ownership, cleaner local energy, a fund for the neighborhood, or energy advice for members."></textarea>
+              </label>
+              <label class="wide-field">
+                <span>Why should people join early?</span>
+                <textarea id="new-liaison-support" name="liaisonSupport" rows="3" placeholder="Share the community you want to build, who should join, and what support would help you get started."></textarea>
               </label>
             </section>
 

@@ -200,10 +200,10 @@ const LIST_COPY = {
       "Find cooperatives advertising surplus electricity, business rates, minimum buyer size, or potential PPA discussions.",
   },
   formation: {
-    kicker: "Starting a co-op",
-    title: "New co-ops forming by country",
+    kicker: "New community groups",
+    title: "Start or join a local energy co-op",
     description:
-      "Browse early-stage groups gathering founding members, planning first assets, or looking for utility company introductions.",
+      "Find people in your country who are gathering neighbors, choosing a first project, and building a new energy community together.",
   },
 };
 
@@ -325,8 +325,10 @@ function getFilteredCoops() {
       coop.surplusAvailability,
       coop.formationStage,
       coop.foundingMemberTarget,
+      coop.formationShareCost,
       coop.plannedAssets,
       coop.utilityNeeds,
+      coop.communityGoals,
       coop.liaisonSupport,
       ...(coop.assets || []).map((asset) => `${asset.type} ${asset.detail}`),
     ]
@@ -463,13 +465,15 @@ function getProfileMarkup(coop, isPreview) {
   const formationSectionMarkup = listsFormation(coop)
     ? `
       <section class="detail-section">
-        <h2>For people starting this co-op</h2>
+        <h2>For people joining early</h2>
         <div class="profile-meta-grid profile-meta-grid--compact">
-          <div class="detail-stat"><span>Stage</span><strong>${escapeHtml(coop.formationStage || "Gathering founding members")}</strong></div>
-          <div class="detail-stat"><span>Founding target</span><strong>${escapeHtml(coop.foundingMemberTarget || "Not listed")}</strong></div>
-          <div class="detail-stat"><span>Planned assets</span><strong>${escapeHtml(coop.plannedAssets || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>Right now</span><strong>${escapeHtml(coop.formationStage || "Gathering interested people")}</strong></div>
+          <div class="detail-stat"><span>People needed</span><strong>${escapeHtml(coop.foundingMemberTarget || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>Early share</span><strong>${escapeHtml(coop.formationShareCost || coop.memberCost || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>First idea</span><strong>${escapeHtml(coop.plannedAssets || "Not listed")}</strong></div>
         </div>
-        ${coop.utilityNeeds ? `<p><strong>Utility support:</strong> ${escapeHtml(coop.utilityNeeds)}</p>` : ""}
+        ${coop.communityGoals ? `<p><strong>Community goals:</strong> ${escapeHtml(coop.communityGoals)}</p>` : ""}
+        ${coop.utilityNeeds ? `<p><strong>Help wanted:</strong> ${escapeHtml(coop.utilityNeeds)}</p>` : ""}
         ${coop.liaisonSupport ? `<p>${escapeHtml(coop.liaisonSupport)}</p>` : ""}
       </section>
     `
@@ -675,8 +679,10 @@ function getDraftCoop() {
     electricityCost: isListingMembers ? clean(form.get("electricityCost")) : "",
     formationStage: isStartingCoop ? clean(form.get("formationStage")) : "",
     foundingMemberTarget: isStartingCoop ? clean(form.get("foundingMemberTarget")) : "",
+    formationShareCost: isStartingCoop ? clean(form.get("formationShareCost")) : "",
     plannedAssets: isStartingCoop ? clean(form.get("plannedAssets")) : "",
     utilityNeeds: isStartingCoop ? clean(form.get("utilityNeeds")) : "",
+    communityGoals: isStartingCoop ? clean(form.get("communityGoals")) : "",
     liaisonSupport: isStartingCoop ? clean(form.get("liaisonSupport")) : "",
     sellsSurplus: isListingSurplus,
     surplusVolume: isListingSurplus ? clean(form.get("surplusVolume")) : "",
@@ -846,7 +852,7 @@ function listsFormation(coop) {
 function getPurposeText(coop) {
   const purposes = [];
   if (listsForMembers(coop)) purposes.push("Members");
-  if (listsFormation(coop)) purposes.push("Starting co-op");
+  if (listsFormation(coop)) purposes.push("New community");
   if (listsSurplus(coop)) purposes.push("Surplus power");
   return purposes.join(" + ") || "Profile only";
 }
@@ -858,11 +864,11 @@ function getRowMeta(coop) {
   }
 
   if (state.audience === "formation" && listsFormation(coop)) {
-    return `${location} / ${coop.formationStage || "Gathering founding members"} / ${coop.foundingMemberTarget || "Founding target not listed"} / ${coop.utilityNeeds || "Utility support not listed"}`;
+    return `${location} / ${coop.formationStage || "Gathering interested people"} / ${coop.formationShareCost || coop.memberCost || "Share cost not listed"} / ${coop.foundingMemberTarget || "People needed not listed"}`;
   }
 
   if (state.audience === "all" && listsFormation(coop) && !listsForMembers(coop)) {
-    return `${location} / Starting a co-op / ${coop.plannedAssets || "First assets not listed"}`;
+    return `${location} / New energy community / ${coop.plannedAssets || "First project idea not listed"}`;
   }
 
   if (state.audience === "all" && listsSurplus(coop) && !listsForMembers(coop)) {
