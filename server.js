@@ -358,14 +358,9 @@ async function handleProfileSubmission(req, res) {
     return;
   }
 
-  const name = cleanText(profile.name);
-  const city = cleanText(profile.city);
-  const country = cleanText(profile.country);
-
-  if (!name || !city || !country) {
-    sendJson(res, 400, { error: "Cooperative name, city, and country are required." });
-    return;
-  }
+  const name = cleanText(profile.name) || account.orgName || "Unnamed cooperative";
+  const city = cleanText(profile.city) || "Not listed";
+  const country = cleanText(profile.country) || account.country || "Not listed";
 
   const profiles = await readRecords(COLLECTIONS.profiles);
   const existing = profiles.find((item) => item.accountId === account.id);

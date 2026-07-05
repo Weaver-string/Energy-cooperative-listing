@@ -705,11 +705,6 @@ async function publishProfile(event) {
   event.preventDefault();
   const draft = getDraftCoop();
 
-  if (draft.name === "Your cooperative" || draft.city === "City" || draft.country === "Country") {
-    profileForm.reportValidity();
-    return;
-  }
-
   const profile = {
     ...draft,
     id: makeId(draft.name),
