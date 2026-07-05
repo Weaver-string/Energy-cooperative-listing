@@ -358,9 +358,20 @@ async function handleProfileSubmission(req, res) {
     return;
   }
 
-  const name = cleanText(profile.name) || account.orgName || "Unnamed cooperative";
-  const city = cleanText(profile.city) || "Not listed";
-  const country = cleanText(profile.country) || account.country || "Not listed";
+  const name = cleanText(profile.name);
+  const city = cleanText(profile.city);
+  const country = cleanText(profile.country);
+  const publicContact = cleanText(profile.publicContact);
+
+  if (!name || !city || !country || !publicContact) {
+    sendJson(res, 400, { error: "Cooperative name, city, country, and public contact email are required." });
+    return;
+  }
+
+  if (!isValidEmail(publicContact)) {
+    sendJson(res, 400, { error: "Enter a valid public contact email." });
+    return;
+  }
 
   const profiles = await readRecords(COLLECTIONS.profiles);
   const existing = profiles.find((item) => item.accountId === account.id);
@@ -377,6 +388,7 @@ async function handleProfileSubmission(req, res) {
     listingGoals,
     openMembers: listingGoals.includes("members") && Boolean(profile.openMembers),
     status: cleanText(profile.status) || "Open membership",
+    publicContact,
     assets: normaliseAssets(profile.assets, profile.capacity),
     needs: ["Member onboarding"],
     memberCost: listingGoals.includes("members") ? cleanText(profile.memberCost) : "",
@@ -566,6 +578,7 @@ async function notifyProfileSubmitted(request, profile) {
     `Country: ${profile.country}`,
     `City: ${profile.city}`,
     `Requester email: ${profile.ownerEmail}`,
+    `Public contact: ${profile.publicContact || "Not listed"}`,
     `Members: ${profile.members || "Not listed"}`,
     `Joining cost: ${profile.memberCost || "Not listed"}`,
     `Electricity cost: ${profile.electricityCost || "Not listed"}`,
@@ -1027,6 +1040,7 @@ function publicProfile(profile) {
     listingGoals: normaliseListingGoals(profile.listingGoals),
     openMembers: profile.openMembers,
     status: profile.status,
+    publicContact: profile.publicContact,
     assets: profile.assets,
     needs: profile.needs,
     memberCost: profile.memberCost,
@@ -1112,6 +1126,10 @@ function toNumber(value) {
 
 function cleanText(value) {
   return String(value || "").trim().slice(0, 2000);
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
 function cleanDataUrl(value) {

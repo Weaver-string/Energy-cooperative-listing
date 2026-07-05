@@ -216,15 +216,19 @@
               <div class="field-grid">
                 <label>
                   <span>Co-op name</span>
-                  <input id="new-name" name="name" type="text" placeholder="River Solar Cooperative" />
+                  <input id="new-name" name="name" type="text" placeholder="River Solar Cooperative" required />
                 </label>
                 <label>
                   <span>City</span>
-                  <input id="new-city" name="city" type="text" placeholder="Rotterdam" />
+                  <input id="new-city" name="city" type="text" placeholder="Rotterdam" required />
                 </label>
                 <label>
                   <span>Country</span>
-                  <input id="new-country" name="country" type="text" list="country-options" placeholder="Netherlands" />
+                  <input id="new-country" name="country" type="text" list="country-options" placeholder="Netherlands" required />
+                </label>
+                <label>
+                  <span>Public contact email</span>
+                  <input id="new-public-contact" name="publicContact" type="email" placeholder="hello@cooperative.example" required />
                 </label>
                 <label>
                   <span>Public status</span>

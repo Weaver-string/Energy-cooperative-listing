@@ -315,6 +315,7 @@ function getFilteredCoops() {
       coop.name,
       coop.city,
       coop.country,
+      coop.publicContact,
       coop.status,
       coop.intro,
       coop.memberCost,
@@ -462,6 +463,10 @@ function getProfileMarkup(coop, isPreview) {
   const capacity = Number(coop.capacity || 0);
   const assets = coop.assets || [];
   const purposeText = getPurposeText(coop);
+  const contactEmail = coop.publicContact || coop.buyerContact || "";
+  const contactButton = contactEmail
+    ? `<a class="button button--dark" href="mailto:${escapeHtml(contactEmail)}">${isPreview ? "Preview contact" : "Message"}</a>`
+    : `<button class="button button--dark" type="button" disabled>${isPreview ? "Preview" : "Message"}</button>`;
   const formationSectionMarkup = listsFormation(coop)
     ? `
       <section class="detail-section">
@@ -519,10 +524,15 @@ function getProfileMarkup(coop, isPreview) {
       </header>
 
       <div class="profile-actions">
-        <button class="button button--dark" type="button">${isPreview ? "Preview" : "Message"}</button>
+        ${contactButton}
         <button class="button button--light" type="button">Follow</button>
         <button class="button button--light" type="button">Share</button>
       </div>
+
+      <section class="detail-section">
+        <h2>Contact</h2>
+        <p>${contactEmail ? `<a href="mailto:${escapeHtml(contactEmail)}">${escapeHtml(contactEmail)}</a>` : "Contact email not listed."}</p>
+      </section>
 
       <section class="profile-meta-grid" aria-label="Profile statistics">
         <div class="detail-stat"><span>Members</span><strong>${formatNumber.format(coop.members || 0)}</strong></div>
@@ -673,6 +683,7 @@ function getDraftCoop() {
     listingGoals,
     openMembers: isListingMembers && form.get("openMembers") === "on",
     status: clean(form.get("status")) || "Open membership",
+    publicContact: clean(form.get("publicContact")),
     assets: [{ type: "Member-owned energy", detail: "Cooperative portfolio", value: assetValue }],
     needs: ["Member onboarding"],
     memberCost: isListingMembers ? clean(form.get("memberCost")) : "",
@@ -801,8 +812,10 @@ function prefillProfileFromAccount() {
 
   const nameInput = document.querySelector("#new-name");
   const countryInput = document.querySelector("#new-country");
+  const publicContactInput = document.querySelector("#new-public-contact");
   if (!nameInput.value) nameInput.value = state.user.orgName;
   if (!countryInput.value) countryInput.value = state.user.country;
+  if (!publicContactInput.value) publicContactInput.value = state.user.email;
 }
 
 function updateListingPurpose() {
