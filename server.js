@@ -386,6 +386,11 @@ async function handleProfileSubmission(req, res) {
     needs: ["Member onboarding"],
     memberCost: listingGoals.includes("members") ? cleanText(profile.memberCost) : "",
     electricityCost: listingGoals.includes("members") ? cleanText(profile.electricityCost) : "",
+    formationStage: listingGoals.includes("formation") ? cleanText(profile.formationStage) : "",
+    foundingMemberTarget: listingGoals.includes("formation") ? cleanText(profile.foundingMemberTarget) : "",
+    plannedAssets: listingGoals.includes("formation") ? cleanText(profile.plannedAssets) : "",
+    utilityNeeds: listingGoals.includes("formation") ? cleanText(profile.utilityNeeds) : "",
+    liaisonSupport: listingGoals.includes("formation") ? cleanText(profile.liaisonSupport) : "",
     sellsSurplus: listingGoals.includes("surplus"),
     surplusVolume: listingGoals.includes("surplus") ? cleanText(profile.surplusVolume) : "",
     surplusRate: listingGoals.includes("surplus") ? cleanText(profile.surplusRate) : "",
@@ -568,6 +573,11 @@ async function notifyProfileSubmitted(request, profile) {
     `Joining cost: ${profile.memberCost || "Not listed"}`,
     `Electricity cost: ${profile.electricityCost || "Not listed"}`,
     `Listing purpose: ${formatListingGoals(profile.listingGoals)}`,
+    `Formation stage: ${profile.formationStage || "Not listed"}`,
+    `Founding member target: ${profile.foundingMemberTarget || "Not listed"}`,
+    `Planned assets: ${profile.plannedAssets || "Not listed"}`,
+    `Utility support needed: ${profile.utilityNeeds || "Not listed"}`,
+    `Liaison opportunity: ${profile.liaisonSupport || "Not listed"}`,
     `Surplus electricity: ${profile.sellsSurplus ? "Yes" : "No"}`,
     `Surplus volume: ${profile.surplusVolume || "Not listed"}`,
     `Business rate: ${profile.surplusRate || "Not listed"}`,
@@ -1022,6 +1032,11 @@ function publicProfile(profile) {
     needs: profile.needs,
     memberCost: profile.memberCost,
     electricityCost: profile.electricityCost,
+    formationStage: profile.formationStage,
+    foundingMemberTarget: profile.foundingMemberTarget,
+    plannedAssets: profile.plannedAssets,
+    utilityNeeds: profile.utilityNeeds,
+    liaisonSupport: profile.liaisonSupport,
     sellsSurplus: Boolean(profile.sellsSurplus || normaliseListingGoals(profile.listingGoals).includes("surplus")),
     surplusVolume: profile.surplusVolume,
     surplusRate: profile.surplusRate,
@@ -1059,7 +1074,7 @@ function normaliseAssets(assets, capacity) {
 function normaliseListingGoals(value) {
   if (!Array.isArray(value)) return ["members"];
   const goals = value;
-  const cleanGoals = goals.filter((goal) => ["members", "surplus"].includes(goal));
+  const cleanGoals = goals.filter((goal) => ["members", "surplus", "formation"].includes(goal));
   return [...new Set(cleanGoals)];
 }
 

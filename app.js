@@ -167,6 +167,7 @@ const rowTemplate = document.querySelector("#profile-row-template");
 const audienceButtons = document.querySelectorAll("[data-audience]");
 const membershipSection = document.querySelector("#membership-section");
 const surplusSection = document.querySelector("#surplus-section");
+const formationSection = document.querySelector("#formation-section");
 const listKicker = document.querySelector("#list-kicker");
 const listTitle = document.querySelector("#list-title");
 const listDescription = document.querySelector("#list-description");
@@ -197,6 +198,12 @@ const LIST_COPY = {
     title: "Co-ops open to electricity buyers",
     description:
       "Find cooperatives advertising surplus electricity, business rates, minimum buyer size, or potential PPA discussions.",
+  },
+  formation: {
+    kicker: "Starting a co-op",
+    title: "New co-ops forming by country",
+    description:
+      "Browse early-stage groups gathering founding members, planning first assets, or looking for utility company introductions.",
   },
 };
 
@@ -253,6 +260,7 @@ function bindEvents() {
   document.querySelector("#new-photo").addEventListener("change", handlePhotoUpload);
   document.querySelector("#new-list-members").addEventListener("change", updateListingPurpose);
   document.querySelector("#new-list-surplus").addEventListener("change", updateListingPurpose);
+  document.querySelector("#new-list-formation").addEventListener("change", updateListingPurpose);
 
   authModeButtons.forEach((button) => {
     button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
@@ -315,6 +323,11 @@ function getFilteredCoops() {
       coop.surplusRate,
       coop.buyerMinimum,
       coop.surplusAvailability,
+      coop.formationStage,
+      coop.foundingMemberTarget,
+      coop.plannedAssets,
+      coop.utilityNeeds,
+      coop.liaisonSupport,
       ...(coop.assets || []).map((asset) => `${asset.type} ${asset.detail}`),
     ]
       .join(" ")
@@ -328,7 +341,8 @@ function getFilteredCoops() {
     const matchesAudience =
       state.audience === "all" ||
       (state.audience === "members" && listsForMembers(coop)) ||
-      (state.audience === "surplus" && listsSurplus(coop));
+      (state.audience === "surplus" && listsSurplus(coop)) ||
+      (state.audience === "formation" && listsFormation(coop));
 
     return matchesQuery && matchesCountry && matchesAsset && matchesAudience;
   });
@@ -381,7 +395,36 @@ function renderProfileList(coops) {
     return;
   }
 
+  if (state.audience === "formation") {
+    renderFormationCountryGroups(coops);
+    return;
+  }
+
   coops.forEach((coop) => profileList.append(createProfileRow(coop)));
+}
+
+function renderFormationCountryGroups(coops) {
+  const groups = coops.reduce((acc, coop) => {
+    const country = coop.country || "Country not listed";
+    if (!acc.has(country)) acc.set(country, []);
+    acc.get(country).push(coop);
+    return acc;
+  }, new Map());
+
+  [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([country, countryCoops]) => {
+      const section = document.createElement("section");
+      section.className = "country-group";
+      section.innerHTML = `
+        <div class="country-group__header">
+          <h3>${escapeHtml(country)}</h3>
+          <span>${countryCoops.length} ${countryCoops.length === 1 ? "group" : "groups"}</span>
+        </div>
+      `;
+      countryCoops.forEach((coop) => section.append(createProfileRow(coop)));
+      profileList.append(section);
+    });
 }
 
 function createProfileRow(coop) {
@@ -417,6 +460,20 @@ function getProfileMarkup(coop, isPreview) {
   const capacity = Number(coop.capacity || 0);
   const assets = coop.assets || [];
   const purposeText = getPurposeText(coop);
+  const formationSectionMarkup = listsFormation(coop)
+    ? `
+      <section class="detail-section">
+        <h2>For people starting this co-op</h2>
+        <div class="profile-meta-grid profile-meta-grid--compact">
+          <div class="detail-stat"><span>Stage</span><strong>${escapeHtml(coop.formationStage || "Gathering founding members")}</strong></div>
+          <div class="detail-stat"><span>Founding target</span><strong>${escapeHtml(coop.foundingMemberTarget || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>Planned assets</span><strong>${escapeHtml(coop.plannedAssets || "Not listed")}</strong></div>
+        </div>
+        ${coop.utilityNeeds ? `<p><strong>Utility support:</strong> ${escapeHtml(coop.utilityNeeds)}</p>` : ""}
+        ${coop.liaisonSupport ? `<p>${escapeHtml(coop.liaisonSupport)}</p>` : ""}
+      </section>
+    `
+    : "";
   const memberSection = listsForMembers(coop)
     ? `
       <section class="detail-section">
@@ -470,6 +527,7 @@ function getProfileMarkup(coop, isPreview) {
       </section>
 
       ${memberSection}
+      ${formationSectionMarkup}
       ${surplusSectionMarkup}
 
       <section class="detail-section">
@@ -598,6 +656,7 @@ function getDraftCoop() {
   const listingGoals = getListingGoals(form);
   const isListingMembers = listingGoals.includes("members");
   const isListingSurplus = listingGoals.includes("surplus");
+  const isStartingCoop = listingGoals.includes("formation");
 
   return {
     id: "draft",
@@ -614,6 +673,11 @@ function getDraftCoop() {
     needs: ["Member onboarding"],
     memberCost: isListingMembers ? clean(form.get("memberCost")) : "",
     electricityCost: isListingMembers ? clean(form.get("electricityCost")) : "",
+    formationStage: isStartingCoop ? clean(form.get("formationStage")) : "",
+    foundingMemberTarget: isStartingCoop ? clean(form.get("foundingMemberTarget")) : "",
+    plannedAssets: isStartingCoop ? clean(form.get("plannedAssets")) : "",
+    utilityNeeds: isStartingCoop ? clean(form.get("utilityNeeds")) : "",
+    liaisonSupport: isStartingCoop ? clean(form.get("liaisonSupport")) : "",
     sellsSurplus: isListingSurplus,
     surplusVolume: isListingSurplus ? clean(form.get("surplusVolume")) : "",
     surplusRate: isListingSurplus ? clean(form.get("surplusRate")) : "",
@@ -743,9 +807,11 @@ function prefillProfileFromAccount() {
 function updateListingPurpose() {
   const memberToggle = document.querySelector("#new-list-members");
   const surplusToggle = document.querySelector("#new-list-surplus");
+  const formationToggle = document.querySelector("#new-list-formation");
 
   membershipSection.classList.toggle("field-hidden", !memberToggle.checked);
   surplusSection.classList.toggle("field-hidden", !surplusToggle.checked);
+  formationSection.classList.toggle("field-hidden", !formationToggle.checked);
   updateCreateFormState();
 }
 
@@ -761,6 +827,7 @@ function getListingGoals(form) {
   const goals = [];
   if (form.get("listingMembers") === "on") goals.push("members");
   if (form.get("listingSurplus") === "on") goals.push("surplus");
+  if (form.get("listingFormation") === "on") goals.push("formation");
   return goals;
 }
 
@@ -772,9 +839,14 @@ function listsSurplus(coop) {
   return Boolean(coop.sellsSurplus || coop.listingGoals?.includes("surplus"));
 }
 
+function listsFormation(coop) {
+  return Boolean(coop.listingGoals?.includes("formation"));
+}
+
 function getPurposeText(coop) {
   const purposes = [];
   if (listsForMembers(coop)) purposes.push("Members");
+  if (listsFormation(coop)) purposes.push("Starting co-op");
   if (listsSurplus(coop)) purposes.push("Surplus power");
   return purposes.join(" + ") || "Profile only";
 }
@@ -783,6 +855,14 @@ function getRowMeta(coop) {
   const location = `${coop.city}, ${coop.country}`;
   if (state.audience === "surplus" && listsSurplus(coop)) {
     return `${location} / ${coop.surplusVolume || "Surplus available"} / ${coop.surplusRate || "Rate not listed"} / ${coop.buyerMinimum || "Buyer size flexible"}`;
+  }
+
+  if (state.audience === "formation" && listsFormation(coop)) {
+    return `${location} / ${coop.formationStage || "Gathering founding members"} / ${coop.foundingMemberTarget || "Founding target not listed"} / ${coop.utilityNeeds || "Utility support not listed"}`;
+  }
+
+  if (state.audience === "all" && listsFormation(coop) && !listsForMembers(coop)) {
+    return `${location} / Starting a co-op / ${coop.plannedAssets || "First assets not listed"}`;
   }
 
   if (state.audience === "all" && listsSurplus(coop) && !listsForMembers(coop)) {

@@ -290,6 +290,18 @@ body.is-focused-flow .topbar {
   background: var(--ink);
 }
 
+.audience-switch button[data-audience="formation"] {
+  color: #a54912;
+  background: #fff6e8;
+  box-shadow: inset 0 0 0 1px rgba(245, 138, 31, 0.32);
+}
+
+.audience-switch button[data-audience="formation"][aria-pressed="true"] {
+  color: #fff;
+  background: #e66d18;
+  box-shadow: 0 10px 22px rgba(230, 109, 24, 0.22);
+}
+
 .auth-switch {
   width: fit-content;
   gap: 4px;
@@ -393,6 +405,33 @@ select {
   background: transparent;
   box-shadow: none;
   gap: 10px;
+}
+
+.country-group {
+  display: grid;
+  gap: 10px;
+}
+
+.country-group + .country-group {
+  margin-top: 18px;
+}
+
+.country-group__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.country-group__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.country-group__header span {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .profile-row {
