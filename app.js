@@ -70,11 +70,11 @@ const AuthProvider = {
     return payload.account || null;
   },
 
-  async requestAccess({ email, password, orgName, country }) {
+  async requestAccess({ email, password, orgName, country, accountType }) {
     const response = await fetch("/api/auth/request-access", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, orgName, country }),
+      body: JSON.stringify({ email, password, orgName, country, accountType }),
     });
 
     const payload = await response.json();
@@ -119,6 +119,15 @@ const AuthProvider = {
 
   async signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
+  },
+
+  async deleteAccount() {
+    const response = await fetch("/api/auth/account", { method: "DELETE" });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not delete this account.");
+    }
+    return payload;
   },
 };
 
@@ -173,6 +182,7 @@ const listTitle = document.querySelector("#list-title");
 const listDescription = document.querySelector("#list-description");
 const authModeButtons = document.querySelectorAll("[data-auth-mode]");
 const requestOnlyFields = document.querySelectorAll("[data-request-only]");
+const signupOnlyFields = document.querySelectorAll("[data-signup-only]");
 const authTitle = document.querySelector("#auth-title");
 const authCopy = document.querySelector("#auth-copy");
 const authAccountHeading = document.querySelector("#auth-account-heading");
@@ -227,13 +237,7 @@ function applyInitialRoute() {
 async function loadOnlineProfiles() {
   try {
     const onlineProfiles = await ProfileProvider.loadPublished();
-    if (!onlineProfiles.length) return;
-
-    const onlineIds = new Set(onlineProfiles.map((profile) => profile.id));
-    cooperatives = [
-      ...onlineProfiles,
-      ...cooperatives.filter((profile) => !onlineIds.has(profile.id)),
-    ];
+    cooperatives = onlineProfiles;
     renderCountryFilter();
     renderCountryOptions();
     render();
@@ -252,6 +256,7 @@ function bindEvents() {
   document.querySelector("#confirmation-back-button").addEventListener("click", showBrowse);
   document.querySelector("#reset-profile-button").addEventListener("click", resetCreateForm);
   document.querySelector("#password-reset-button").addEventListener("click", handlePasswordResetRequest);
+  document.querySelector("#delete-account-button").addEventListener("click", handleDeleteAccount);
 
   authForm.addEventListener("submit", handleAuthSubmit);
   profileForm.addEventListener("input", updateCreateFormState);
@@ -613,7 +618,7 @@ function beginProfileSetup() {
     showCreate();
     return;
   }
-  showAuth("request");
+  showAuth(state.audience === "formation" ? "start" : "request");
 }
 
 function showCreate() {
@@ -621,6 +626,7 @@ function showCreate() {
   state.profileSubmitted = false;
   renderCountryOptions();
   prefillProfileFromAccount();
+  applyStarterDefaults();
   updateListingPurpose();
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -750,17 +756,19 @@ async function handleAuthSubmit(event) {
   const form = new FormData(authForm);
   const email = clean(form.get("email"));
   const password = clean(form.get("password"));
+  const isLoginMode = state.authMode === "login";
+  const isStartMode = state.authMode === "start";
 
   try {
-    state.user =
-      state.authMode === "login"
-        ? await AuthProvider.login({ email, password })
-        : await AuthProvider.requestAccess({
-            email,
-            password,
-            orgName: clean(form.get("orgName")),
-            country: clean(form.get("country")),
-          });
+    state.user = isLoginMode
+      ? await AuthProvider.login({ email, password })
+      : await AuthProvider.requestAccess({
+          email,
+          password,
+          orgName: isStartMode ? clean(form.get("orgName")) || "New energy co-op group" : clean(form.get("orgName")),
+          country: clean(form.get("country")),
+          accountType: isStartMode ? "formation" : "cooperative",
+        });
   } catch (error) {
     window.alert(error.message);
     return;
@@ -770,20 +778,35 @@ async function handleAuthSubmit(event) {
 }
 
 function setAuthMode(mode, shouldRender = true) {
-  state.authMode = mode === "request" ? "request" : "login";
+  state.authMode = ["request", "start"].includes(mode) ? mode : "login";
   authOrgName.required = state.authMode === "request";
-  authCountry.required = state.authMode === "request";
+  authCountry.required = state.authMode !== "login";
   if (shouldRender) renderAuthMode();
 }
 
 function renderAuthMode() {
   const isRequestMode = state.authMode === "request";
+  const isStartMode = state.authMode === "start";
+  const isSignupMode = isRequestMode || isStartMode;
   authModeButtons.forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.authMode === state.authMode));
   });
   requestOnlyFields.forEach((element) => {
     element.classList.toggle("is-hidden", !isRequestMode);
   });
+  signupOnlyFields.forEach((element) => {
+    element.classList.toggle("is-hidden", !isSignupMode);
+  });
+
+  if (isStartMode) {
+    authTitle.textContent = "Start a local energy co-op.";
+    authCopy.textContent =
+      "Create a simple account, then make a recruiting page for people who might join your new community.";
+    authAccountHeading.textContent = "Create account";
+    authSubmitButton.textContent = "Start drafting";
+    return;
+  }
+
   authTitle.textContent = isRequestMode ? "Request listing access." : "Log in to your co-op account.";
   authCopy.textContent = isRequestMode
     ? "Create a secure account to draft your profile. New requests are reviewed manually before the cooperative is marked verified or appears publicly."
@@ -816,6 +839,40 @@ function prefillProfileFromAccount() {
   if (!nameInput.value) nameInput.value = state.user.orgName;
   if (!countryInput.value) countryInput.value = state.user.country;
   if (!publicContactInput.value) publicContactInput.value = state.user.email;
+}
+
+function applyStarterDefaults() {
+  if (state.authMode !== "start" && state.user?.accountType !== "formation") return;
+
+  const formationToggle = document.querySelector("#new-list-formation");
+  const memberToggle = document.querySelector("#new-list-members");
+  const statusInput = document.querySelector("#new-status");
+  if (formationToggle && !formationToggle.checked) formationToggle.checked = true;
+  if (memberToggle && !memberToggle.checked) memberToggle.checked = true;
+  if (statusInput && statusInput.value === "Open membership") statusInput.value = "New community group";
+}
+
+async function handleDeleteAccount() {
+  if (!state.user) return;
+
+  const confirmed = window.confirm(
+    "Delete this Energy Agora account and remove its profile from the site? This cannot be undone.",
+  );
+  if (!confirmed) return;
+
+  try {
+    await AuthProvider.deleteAccount();
+  } catch (error) {
+    window.alert(error.message);
+    return;
+  }
+
+  state.user = null;
+  state.profileSubmitted = false;
+  state.draftPhotoUrl = "";
+  profileForm.reset();
+  await loadOnlineProfiles();
+  showBrowse();
 }
 
 function updateListingPurpose() {

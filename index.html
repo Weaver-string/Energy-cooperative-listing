@@ -137,6 +137,7 @@
             <div class="auth-switch" aria-label="Account action">
               <button type="button" data-auth-mode="login" aria-pressed="true">Log in</button>
               <button type="button" data-auth-mode="request" aria-pressed="false">Request access</button>
+              <button type="button" data-auth-mode="start" aria-pressed="false">Start a co-op</button>
             </div>
 
             <section class="form-section">
@@ -154,7 +155,7 @@
                   <span>Organization name</span>
                   <input id="auth-org-name" name="orgName" type="text" placeholder="River Solar Cooperative" />
                 </label>
-                <label data-request-only>
+                <label data-signup-only>
                   <span>Country</span>
                   <input id="auth-country" name="country" type="text" list="country-options" placeholder="Netherlands" />
                 </label>
@@ -382,6 +383,14 @@
                 <label><input type="radio" name="color" value="#f97316" /><span style="background:#f97316"></span></label>
                 <label><input type="radio" name="color" value="#0f172a" /><span style="background:#0f172a"></span></label>
                 <label><input type="radio" name="color" value="#be185d" /><span style="background:#be185d"></span></label>
+              </div>
+            </section>
+
+            <section class="form-section account-settings">
+              <h2>Account</h2>
+              <p class="form-note">Deleting your account also removes your profile draft or public listing from Energy Agora.</p>
+              <div class="form-inline-action">
+                <button class="button button--danger" id="delete-account-button" type="button">Delete account</button>
               </div>
             </section>
 

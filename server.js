@@ -95,6 +95,11 @@ async function handleRequest(req, res) {
       return;
     }
 
+    if (req.method === "DELETE" && url.pathname === "/api/auth/account") {
+      await handleDeleteAccount(req, res);
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/api/auth/session") {
       await handleSession(req, res);
       return;
@@ -157,14 +162,20 @@ async function handleAccessRequest(req, res) {
   const body = await readBody(req);
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
+  const accountType = body.accountType === "formation" ? "formation" : "cooperative";
   const orgName = String(body.orgName || "").trim();
   const country = String(body.country || "").trim();
 
   if (!checkRateLimit(req, res, "access-ip", 30, 15 * 60 * 1000)) return;
   if (!checkRateLimit(req, res, `access:${email || "unknown"}`, 6, 15 * 60 * 1000)) return;
 
-  if (!email || !password || !orgName || !country) {
-    sendJson(res, 400, { error: "Email, password, cooperative name, and country are required." });
+  if (!email || !password || !country || (accountType === "cooperative" && !orgName)) {
+    sendJson(res, 400, {
+      error:
+        accountType === "formation"
+          ? "Email, password, and country are required."
+          : "Email, password, cooperative name, and country are required.",
+    });
     return;
   }
 
@@ -200,8 +211,9 @@ async function handleAccessRequest(req, res) {
     id: `acct_${crypto.randomUUID()}`,
     email,
     passwordHash: await hashPassword(password),
-    orgName,
+    orgName: orgName || "New energy co-op group",
     country,
+    accountType,
     verificationStatus: "Pending manual review",
     createdAt: new Date().toISOString(),
   };
@@ -257,6 +269,44 @@ async function handleLogin(req, res) {
 
 async function handleLogout(req, res) {
   await revokeSession(req);
+  clearSessionCookie(res);
+  sendJson(res, 200, { ok: true });
+}
+
+async function handleDeleteAccount(req, res) {
+  const auth = await getAuthenticatedSession(req);
+  if (!auth) {
+    sendJson(res, 401, { error: "Please log in before deleting your account." });
+    return;
+  }
+
+  const accountId = auth.account.id;
+  const [accounts, requests, profiles, sessions] = await Promise.all([
+    readRecords(COLLECTIONS.accounts),
+    readRecords(COLLECTIONS.requests),
+    readRecords(COLLECTIONS.profiles),
+    readRecords(COLLECTIONS.sessions),
+  ]);
+
+  await Promise.all([
+    writeRecords(
+      COLLECTIONS.accounts,
+      accounts.filter((account) => account.id !== accountId),
+    ),
+    writeRecords(
+      COLLECTIONS.requests,
+      requests.filter((request) => request.accountId !== accountId),
+    ),
+    writeRecords(
+      COLLECTIONS.profiles,
+      profiles.filter((profile) => profile.accountId !== accountId),
+    ),
+    writeRecords(
+      COLLECTIONS.sessions,
+      sessions.filter((session) => session.accountId !== accountId),
+    ),
+  ]);
+
   clearSessionCookie(res);
   sendJson(res, 200, { ok: true });
 }
@@ -1009,6 +1059,7 @@ function publicAccount(account) {
     email: account.email,
     orgName: account.orgName,
     country: account.country,
+    accountType: account.accountType || "cooperative",
     verificationStatus: account.verificationStatus,
     createdAt: account.createdAt,
     verifiedAt: account.verifiedAt || null,

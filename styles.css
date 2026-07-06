@@ -178,6 +178,16 @@ body.is-focused-flow .topbar {
   background: var(--surface-soft);
 }
 
+.button--danger {
+  border: 1px solid rgba(190, 24, 93, 0.22);
+  color: #be185d;
+  background: #fff1f5;
+}
+
+.button--danger:hover {
+  background: #ffe4ec;
+}
+
 .topbar__actions {
   justify-content: flex-end;
   gap: 10px;
