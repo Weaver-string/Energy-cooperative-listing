@@ -1161,6 +1161,7 @@ function normaliseAssets(assets, capacity) {
 function normaliseListingGoals(value) {
   if (!Array.isArray(value)) return ["members"];
   const goals = value;
+  if (goals.includes("formation")) return ["formation"];
   const cleanGoals = goals.filter((goal) => ["members", "surplus", "formation"].includes(goal));
   return [...new Set(cleanGoals)];
 }

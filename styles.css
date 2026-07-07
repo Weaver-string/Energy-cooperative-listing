@@ -874,6 +874,24 @@ select {
   accent-color: var(--green);
 }
 
+.checkbox-field--formation {
+  border-color: rgba(68, 151, 218, 0.28);
+  background: #edf7ff;
+}
+
+.checkbox-field--formation span {
+  color: #1d5f9f;
+}
+
+.checkbox-field--formation input {
+  accent-color: #2f80c9;
+}
+
+.checkbox-field--formation:has(input:checked) {
+  border-color: rgba(47, 128, 201, 0.52);
+  box-shadow: 0 10px 22px rgba(47, 128, 201, 0.14);
+}
+
 .upload-field {
   margin-bottom: 16px;
 }

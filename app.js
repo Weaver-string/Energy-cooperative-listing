@@ -264,9 +264,9 @@ function bindEvents() {
   profileForm.addEventListener("submit", publishProfile);
   document.querySelector("#new-photo").addEventListener("change", handlePhotoUpload);
   document.querySelector("#remove-photo-button").addEventListener("click", removeProfilePhoto);
-  document.querySelector("#new-list-members").addEventListener("change", updateListingPurpose);
-  document.querySelector("#new-list-surplus").addEventListener("change", updateListingPurpose);
-  document.querySelector("#new-list-formation").addEventListener("change", updateListingPurpose);
+  document.querySelector("#new-list-members").addEventListener("change", handleListingPurposeChange);
+  document.querySelector("#new-list-surplus").addEventListener("change", handleListingPurposeChange);
+  document.querySelector("#new-list-formation").addEventListener("change", handleListingPurposeChange);
 
   authModeButtons.forEach((button) => {
     button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
@@ -847,9 +847,11 @@ function applyStarterDefaults() {
 
   const formationToggle = document.querySelector("#new-list-formation");
   const memberToggle = document.querySelector("#new-list-members");
+  const surplusToggle = document.querySelector("#new-list-surplus");
   const statusInput = document.querySelector("#new-status");
   if (formationToggle && !formationToggle.checked) formationToggle.checked = true;
-  if (memberToggle && !memberToggle.checked) memberToggle.checked = true;
+  if (memberToggle) memberToggle.checked = false;
+  if (surplusToggle) surplusToggle.checked = false;
   if (statusInput && statusInput.value === "Open membership") statusInput.value = "New community group";
 }
 
@@ -876,6 +878,23 @@ async function handleDeleteAccount() {
   showBrowse();
 }
 
+function handleListingPurposeChange(event) {
+  const memberToggle = document.querySelector("#new-list-members");
+  const surplusToggle = document.querySelector("#new-list-surplus");
+  const formationToggle = document.querySelector("#new-list-formation");
+
+  if (event?.target === formationToggle && formationToggle.checked) {
+    memberToggle.checked = false;
+    surplusToggle.checked = false;
+  }
+
+  if ((event?.target === memberToggle || event?.target === surplusToggle) && event.target.checked) {
+    formationToggle.checked = false;
+  }
+
+  updateListingPurpose();
+}
+
 function updateListingPurpose() {
   const memberToggle = document.querySelector("#new-list-members");
   const surplusToggle = document.querySelector("#new-list-surplus");
@@ -897,9 +916,9 @@ function updateCreateFormState() {
 
 function getListingGoals(form) {
   const goals = [];
+  if (form.get("listingFormation") === "on") return ["formation"];
   if (form.get("listingMembers") === "on") goals.push("members");
   if (form.get("listingSurplus") === "on") goals.push("surplus");
-  if (form.get("listingFormation") === "on") goals.push("formation");
   return goals;
 }
 
