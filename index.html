@@ -203,17 +203,18 @@
 
             <section class="form-section">
               <h2>Profile basics</h2>
-              <label class="upload-field">
+              <div class="upload-field">
                 <span>Profile picture</span>
-                <input id="new-photo" name="photo" type="file" accept="image/*" />
-                <span class="upload-control">
+                <label class="upload-control">
+                  <input id="new-photo" name="photo" type="file" accept="image/*" />
                   <span class="upload-avatar" id="upload-avatar">EA</span>
                   <span>
                     <strong>Upload logo or community photo</strong>
                     <small>Square images work best.</small>
                   </span>
-                </span>
-              </label>
+                </label>
+                <button class="button button--light upload-remove" id="remove-photo-button" type="button">Remove photo</button>
+              </div>
               <div class="field-grid">
                 <label>
                   <span>Co-op name</span>

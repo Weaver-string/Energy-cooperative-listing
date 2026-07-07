@@ -878,7 +878,14 @@ select {
   margin-bottom: 16px;
 }
 
-.upload-field input {
+.upload-field > span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.upload-control input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -912,6 +919,10 @@ select {
   overflow: hidden;
   border-radius: 20px;
   background: var(--green);
+}
+
+.upload-remove {
+  margin-top: 10px;
 }
 
 .field-hidden {

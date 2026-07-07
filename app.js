@@ -263,6 +263,7 @@ function bindEvents() {
   profileForm.addEventListener("change", updateCreateFormState);
   profileForm.addEventListener("submit", publishProfile);
   document.querySelector("#new-photo").addEventListener("change", handlePhotoUpload);
+  document.querySelector("#remove-photo-button").addEventListener("click", removeProfilePhoto);
   document.querySelector("#new-list-members").addEventListener("change", updateListingPurpose);
   document.querySelector("#new-list-surplus").addEventListener("change", updateListingPurpose);
   document.querySelector("#new-list-formation").addEventListener("change", updateListingPurpose);
@@ -961,6 +962,13 @@ function handlePhotoUpload(event) {
     updateCreateFormState();
   });
   reader.readAsDataURL(file);
+}
+
+function removeProfilePhoto() {
+  const photoInput = document.querySelector("#new-photo");
+  photoInput.value = "";
+  state.draftPhotoUrl = "";
+  updateCreateFormState();
 }
 
 function setAvatar(element, coop) {
