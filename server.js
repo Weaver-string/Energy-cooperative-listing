@@ -481,8 +481,7 @@ async function handleProfileSubmission(req, res) {
   await writeRecords(COLLECTIONS.profiles, profiles);
 
   if (!savedProfile.published) {
-    const request = (await getOpenListingRequest(account)) || (await createListingRequest(account));
-    await notifyProfileSubmitted(request, savedProfile);
+    await notifyProfileSubmittedOnce(account, savedProfile);
   }
 
   sendJson(res, 201, {
@@ -494,7 +493,15 @@ async function handleProfileSubmission(req, res) {
 
 async function createListingRequest(account) {
   const requests = await readRecords(COLLECTIONS.requests);
-  const request = {
+  const request = makeListingRequest(account);
+
+  requests.unshift(request);
+  await writeRecords(COLLECTIONS.requests, requests);
+  return request;
+}
+
+function makeListingRequest(account) {
+  return {
     id: `req_${crypto.randomUUID()}`,
     accountId: account.id,
     email: account.email,
@@ -505,10 +512,6 @@ async function createListingRequest(account) {
     requestedAt: new Date().toISOString(),
     approvedAt: null,
   };
-
-  requests.unshift(request);
-  await writeRecords(COLLECTIONS.requests, requests);
-  return request;
 }
 
 async function notifyAdmin(request) {
@@ -583,6 +586,24 @@ async function getOpenListingRequest(account) {
   return requests.find(
     (request) => request.accountId === account.id && request.status !== "Approved",
   );
+}
+
+async function notifyProfileSubmittedOnce(account, profile) {
+  const requests = await readRecords(COLLECTIONS.requests);
+  let request = requests.find(
+    (item) => item.accountId === account.id && item.status !== "Approved",
+  );
+
+  if (!request) {
+    request = makeListingRequest(account);
+    requests.unshift(request);
+  }
+
+  if (request.profileReviewEmailSentAt) return;
+
+  await notifyProfileSubmitted(request, profile);
+  request.profileReviewEmailSentAt = new Date().toISOString();
+  await writeRecords(COLLECTIONS.requests, requests);
 }
 
 async function sendPasswordReset(account, accounts) {
