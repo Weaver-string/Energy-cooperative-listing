@@ -12,6 +12,8 @@ const state = {
   pendingProfile: null,
   profileSubmitted: false,
   authMode: "login",
+  routeProfileId: "",
+  routeApproved: false,
 };
 
 const EUROPEAN_COUNTRIES = [
@@ -229,9 +231,14 @@ async function init() {
 function applyInitialRoute() {
   const params = new URLSearchParams(window.location.search);
   const query = clean(params.get("q"));
-  if (!query) return;
-  state.query = query.toLowerCase();
-  if (searchInput) searchInput.value = query;
+  const profileId = clean(params.get("profile"));
+  state.routeApproved = params.get("approved") === "1";
+  state.routeProfileId = profileId;
+
+  if (query) {
+    state.query = query.toLowerCase();
+    if (searchInput) searchInput.value = query;
+  }
 }
 
 async function loadOnlineProfiles() {
@@ -240,9 +247,30 @@ async function loadOnlineProfiles() {
     cooperatives = onlineProfiles;
     renderCountryFilter();
     renderCountryOptions();
+    applyApprovedProfileRoute();
     render();
   } catch (error) {
     console.warn("Could not load online cooperative profiles.", error);
+  }
+}
+
+function applyApprovedProfileRoute() {
+  if (!state.routeProfileId) return;
+  const profile = cooperatives.find((coop) => coop.id === state.routeProfileId);
+  if (!profile) return;
+
+  state.view = "browse";
+  state.selectedId = profile.id;
+  state.query = "";
+  state.country = "All";
+  state.audience = "all";
+  state.asset = "all";
+  if (searchInput) searchInput.value = "";
+  if (assetFilter) assetFilter.value = "all";
+  state.routeProfileId = "";
+
+  if (window.history?.replaceState) {
+    window.history.replaceState({}, "", window.location.pathname);
   }
 }
 
@@ -441,6 +469,7 @@ function createProfileRow(coop) {
   const button = node.querySelector(".profile-row__button");
   const avatar = node.querySelector(".avatar");
 
+  button.dataset.id = coop.id;
   button.classList.toggle("is-active", coop.id === state.selectedId);
   button.addEventListener("click", () => showDetail(coop.id));
 

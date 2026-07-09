@@ -477,7 +477,7 @@ async function handleProfileSubmission(req, res) {
   await writeRecords(COLLECTIONS.profiles, profiles);
 
   if (!savedProfile.published) {
-    await notifyProfileSubmittedOnce(account, savedProfile);
+    await notifyProfileSubmittedOnce(account, savedProfile, req);
   }
 
   sendJson(res, 201, {
@@ -532,11 +532,10 @@ async function handleApproveRequest(res, requestId, token) {
     }
   }
 
-  sendHtml(
-    res,
-    200,
-    getApprovalResultMarkup(request, account, profile),
-  );
+  const redirectTarget = profile
+    ? `/?profile=${encodeURIComponent(profile.id)}&approved=1`
+    : "/?approved=1";
+  redirect(res, 303, redirectTarget);
 }
 
 async function getOpenListingRequest(account) {
@@ -546,7 +545,7 @@ async function getOpenListingRequest(account) {
   );
 }
 
-async function notifyProfileSubmittedOnce(account, profile) {
+async function notifyProfileSubmittedOnce(account, profile, req) {
   const requests = await readRecords(COLLECTIONS.requests);
   let request = requests.find(
     (item) => item.accountId === account.id && item.status !== "Approved",
@@ -559,7 +558,7 @@ async function notifyProfileSubmittedOnce(account, profile) {
 
   if (request.profileReviewEmailSentAt) return;
 
-  const sent = await notifyProfileSubmitted(request, profile, account);
+  const sent = await notifyProfileSubmitted(request, profile, account, getRequestBaseUrl(req));
   if (!sent) return;
 
   request.profileReviewEmailSentAt = new Date().toISOString();
@@ -599,8 +598,8 @@ async function sendPasswordReset(account, accounts) {
   });
 }
 
-async function notifyProfileSubmitted(request, profile, account) {
-  const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
+async function notifyProfileSubmitted(request, profile, account, baseUrl = PUBLIC_BASE_URL) {
+  const approveUrl = `${baseUrl}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
   const subject = `Energy Agora profile ready for review: ${profile.name}`;
   const details = getProfileReviewDetails(request, profile, account);
   const text = [
@@ -913,6 +912,18 @@ function sendJson(res, status, data) {
 function sendHtml(res, status, body) {
   res.writeHead(status, { "Content-Type": "text/html; charset=utf-8" });
   res.end(`<!doctype html><html><body>${body}</body></html>`);
+}
+
+function redirect(res, status, location) {
+  res.writeHead(status, { Location: location });
+  res.end();
+}
+
+function getRequestBaseUrl(req) {
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return PUBLIC_BASE_URL;
+  const protocol = req.headers["x-forwarded-proto"] || (isLocalRequest(req) ? "http" : "https");
+  return `${String(protocol).split(",")[0]}://${String(host).split(",")[0]}`;
 }
 
 function isStateChangingRequest(req) {
