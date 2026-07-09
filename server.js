@@ -221,14 +221,10 @@ async function handleAccessRequest(req, res) {
   accounts.push(account);
   await writeRecords(COLLECTIONS.accounts, accounts);
 
-  const request = await createListingRequest(account);
-  await notifyAdmin(request);
-
   await createSession(res, account);
   sendJson(res, 201, {
     account: publicAccount(account),
     isNewAccount: true,
-    request: publicListingRequest(request),
   });
 }
 
@@ -491,15 +487,6 @@ async function handleProfileSubmission(req, res) {
   });
 }
 
-async function createListingRequest(account) {
-  const requests = await readRecords(COLLECTIONS.requests);
-  const request = makeListingRequest(account);
-
-  requests.unshift(request);
-  await writeRecords(COLLECTIONS.requests, requests);
-  return request;
-}
-
 function makeListingRequest(account) {
   return {
     id: `req_${crypto.randomUUID()}`,
@@ -512,36 +499,6 @@ function makeListingRequest(account) {
     requestedAt: new Date().toISOString(),
     approvedAt: null,
   };
-}
-
-async function notifyAdmin(request) {
-  const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
-  const subject = `New Energy Agora listing request: ${request.orgName}`;
-  const text = [
-    "A cooperative has requested listing access on Energy Agora.",
-    "",
-    `Cooperative: ${request.orgName}`,
-    `Country: ${request.country}`,
-    `Requester email: ${request.email}`,
-    `Status: ${request.status}`,
-    `Requested at: ${new Date(request.requestedAt).toLocaleString()}`,
-    "",
-    "Manual review checklist:",
-    "- Check whether the requester email is associated with the cooperative.",
-    "- Search public cooperative registry or official website.",
-    "- Contact the cooperative through a public channel if needed.",
-    "",
-    "Approve after verification:",
-    approveUrl,
-  ].join("\n");
-
-  await sendAdminEmail(subject, text, `${request.id}.eml`, getEmailMarkup(
-    "New listing request",
-    `A cooperative has requested listing access: ${escapeHtml(request.orgName)}.`,
-    "Approve after verification",
-    approveUrl,
-    "Only use this link after you manually verify that the requester is associated with the cooperative.",
-  ));
 }
 
 async function handleApproveRequest(res, requestId, token) {
@@ -559,13 +516,14 @@ async function handleApproveRequest(res, requestId, token) {
 
   const accounts = await readRecords(COLLECTIONS.accounts);
   const account = accounts.find((item) => item.id === request.accountId);
+  let profile = null;
   if (account) {
     account.verificationStatus = "Verified";
     account.verifiedAt = request.approvedAt;
     await writeRecords(COLLECTIONS.accounts, accounts);
 
     const profiles = await readRecords(COLLECTIONS.profiles);
-    const profile = profiles.find((item) => item.accountId === account.id);
+    profile = profiles.find((item) => item.accountId === account.id);
     if (profile) {
       profile.verificationStatus = "Verified";
       profile.published = true;
@@ -577,7 +535,7 @@ async function handleApproveRequest(res, requestId, token) {
   sendHtml(
     res,
     200,
-    `<h1>Approved</h1><p>${escapeHtml(request.orgName)} has been marked as verified. If a profile draft exists, it is now public.</p><p>Requester: ${escapeHtml(request.email)}</p>`,
+    getApprovalResultMarkup(request, account, profile),
   );
 }
 
@@ -601,7 +559,9 @@ async function notifyProfileSubmittedOnce(account, profile) {
 
   if (request.profileReviewEmailSentAt) return;
 
-  await notifyProfileSubmitted(request, profile);
+  const sent = await notifyProfileSubmitted(request, profile, account);
+  if (!sent) return;
+
   request.profileReviewEmailSentAt = new Date().toISOString();
   await writeRecords(COLLECTIONS.requests, requests);
 }
@@ -639,49 +599,171 @@ async function sendPasswordReset(account, accounts) {
   });
 }
 
-async function notifyProfileSubmitted(request, profile) {
+async function notifyProfileSubmitted(request, profile, account) {
   const approveUrl = `${PUBLIC_BASE_URL}/api/listing-requests/${encodeURIComponent(request.id)}/approve?token=${encodeURIComponent(request.token)}`;
   const subject = `Energy Agora profile ready for review: ${profile.name}`;
+  const details = getProfileReviewDetails(request, profile, account);
   const text = [
-    "A cooperative profile draft has been submitted on Energy Agora.",
+    "A cooperative profile draft has been submitted on Energy Agora and is ready for manual verification.",
     "",
-    `Cooperative: ${profile.name}`,
-    `Country: ${profile.country}`,
-    `City: ${profile.city}`,
-    `Requester email: ${profile.ownerEmail}`,
-    `Public contact: ${profile.publicContact || "Not listed"}`,
-    `Members: ${profile.members || "Not listed"}`,
-    `Joining cost: ${profile.memberCost || "Not listed"}`,
-    `Electricity cost: ${profile.electricityCost || "Not listed"}`,
-    `Listing purpose: ${formatListingGoals(profile.listingGoals)}`,
-    `Starting point: ${profile.formationStage || "Not listed"}`,
-    `People they hope to gather: ${profile.foundingMemberTarget || "Not listed"}`,
-    `Early share cost: ${profile.formationShareCost || "Not listed"}`,
-    `First project idea: ${profile.plannedAssets || "Not listed"}`,
-    `Community goals: ${profile.communityGoals || "Not listed"}`,
-    `Help wanted: ${profile.utilityNeeds || "Not listed"}`,
-    `Why people should join early: ${profile.liaisonSupport || "Not listed"}`,
-    `Surplus electricity: ${profile.sellsSurplus ? "Yes" : "No"}`,
-    `Surplus volume: ${profile.surplusVolume || "Not listed"}`,
-    `Business rate: ${profile.surplusRate || "Not listed"}`,
-    `Minimum buyer: ${profile.buyerMinimum || "Not listed"}`,
-    `Business contact: ${profile.buyerContact || "Not listed"}`,
+    ...details.map(([label, value]) => `${label}: ${value}`),
     "",
     "Approve after verification:",
     approveUrl,
   ].join("\n");
 
-  await sendAdminEmail(subject, text, `profile-${request.id}.eml`, getEmailMarkup(
-    "Profile ready for review",
-    `${escapeHtml(profile.name)} submitted a profile draft. Review the details in this email before approving.`,
-    "Approve after verification",
-    approveUrl,
-    "Only use this link after you manually verify that the requester is associated with the cooperative.",
-  ));
+  return sendAdminEmail(
+    subject,
+    text,
+    `profile-${request.id}.eml`,
+    getProfileReviewEmailMarkup(request, profile, account, approveUrl),
+  );
+}
+
+function getProfileReviewDetails(request, profile = null, account = null) {
+  const accountType = account?.accountType === "formation" ? "New co-op community" : "Established cooperative";
+  const details = [
+    ["Account email", request.email || account?.email],
+    ["Account type", accountType],
+    ["Account country", request.country || account?.country],
+    ["Account created", formatReviewDate(account?.createdAt)],
+    ["Request created", formatReviewDate(request.requestedAt)],
+    ["Current request status", request.status],
+  ];
+
+  if (!profile) {
+    details.push(["Profile draft", "Not submitted"]);
+    return details.map(([label, value]) => [label, displayReviewValue(value)]);
+  }
+
+  details.push(
+    ["Profile name", profile.name],
+    ["City", profile.city],
+    ["Country", profile.country],
+    ["Public contact email", profile.publicContact],
+    ["Public status", profile.status],
+    ["Listing purpose", formatListingGoalsForReview(profile.listingGoals)],
+    ["Short profile bio", profile.intro],
+    ["Profile picture", profile.photoUrl ? "Uploaded" : "Not uploaded"],
+    ["Members", profile.members ? String(profile.members) : ""],
+    ["Owned capacity", profile.capacity ? `${profile.capacity} MW` : ""],
+    ["Assets", formatAssetsForReview(profile.assets)],
+    ["Cost to become a member", profile.memberCost],
+    ["Member electricity cost", profile.electricityCost],
+    ["Starting point", profile.formationStage],
+    ["People they hope to gather", profile.foundingMemberTarget],
+    ["Early share cost", profile.formationShareCost],
+    ["First project idea", profile.plannedAssets],
+    ["Help wanted", profile.utilityNeeds],
+    ["Community goals", profile.communityGoals],
+    ["Why people should join early", profile.liaisonSupport],
+    ["Selling surplus electricity", profile.sellsSurplus ? "Yes" : "No"],
+    ["Surplus volume", profile.surplusVolume],
+    ["Business rate", profile.surplusRate],
+    ["Minimum buyer", profile.buyerMinimum],
+    ["Surplus availability", profile.surplusAvailability],
+    ["Business contact", profile.buyerContact],
+    ["Submitted at", formatReviewDate(profile.submittedAt)],
+    ["Last updated", formatReviewDate(profile.updatedAt)],
+  );
+
+  return details.map(([label, value]) => [label, displayReviewValue(value)]);
+}
+
+function getProfileReviewEmailMarkup(request, profile, account, approveUrl) {
+  const rows = getProfileReviewDetails(request, profile, account)
+    .map(([label, value]) => `
+      <tr>
+        <th style="text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#596560;font-size:13px;width:34%">${escapeHtml(label)}</th>
+        <td style="vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#121614;font-size:14px">${escapeHtml(value)}</td>
+      </tr>
+    `)
+    .join("");
+
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#121614;line-height:1.5;max-width:680px">
+      <p style="margin:0 0 8px;color:#087d68;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Energy Agora review</p>
+      <h1 style="font-size:26px;line-height:1.15;margin:0 0 12px">Profile ready for verification</h1>
+      <p style="margin:0 0 20px;color:#4f5b56">This email is sent after the profile draft is submitted, so it includes the account request and the full profile details.</p>
+      <table style="border-collapse:collapse;width:100%;border:1px solid #e5ece8;border-radius:12px;overflow:hidden;margin:0 0 22px">${rows}</table>
+      <p style="margin:26px 0">
+        <a href="${escapeHtml(approveUrl)}" style="background:#121614;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700;display:inline-block">Approve after verification</a>
+      </p>
+      <p style="margin:0 0 18px;color:#68736f;font-size:14px">Only use this private link after you manually verify that the requester is associated with the cooperative or group.</p>
+      <p style="margin:0;color:#68736f;font-size:12px">If the button does not open, copy this link: ${escapeHtml(approveUrl)}</p>
+    </div>
+  `;
+}
+
+function getApprovalResultMarkup(request, account, profile) {
+  const rows = getProfileReviewDetails(request, profile, account)
+    .map(([label, value]) => `
+      <tr>
+        <th>${escapeHtml(label)}</th>
+        <td>${escapeHtml(value)}</td>
+      </tr>
+    `)
+    .join("");
+
+  return `
+    <main>
+      <style>
+        body { margin: 0; background: #fbfcf8; color: #121614; font-family: Inter, Arial, sans-serif; }
+        main { max-width: 860px; margin: 48px auto; padding: 32px; }
+        .panel { background: #fff; border: 1px solid #e4ebe7; border-radius: 22px; box-shadow: 0 18px 40px rgba(18, 22, 20, .08); padding: 32px; }
+        .eyebrow { color: #087d68; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; margin: 0 0 8px; }
+        h1 { font-size: clamp(38px, 6vw, 64px); line-height: .98; margin: 0 0 16px; }
+        p { color: #5f6b66; font-size: 18px; line-height: 1.5; margin: 0 0 24px; }
+        table { width: 100%; border-collapse: collapse; border: 1px solid #e4ebe7; border-radius: 14px; overflow: hidden; }
+        th, td { border-bottom: 1px solid #e4ebe7; padding: 12px 14px; text-align: left; vertical-align: top; }
+        th { width: 32%; color: #5f6b66; font-size: 13px; }
+        td { color: #121614; font-size: 14px; }
+        tr:last-child th, tr:last-child td { border-bottom: 0; }
+        a { color: #087d68; font-weight: 800; }
+      </style>
+      <section class="panel">
+        <p class="eyebrow">Approved</p>
+        <h1>Verification complete.</h1>
+        <p>${escapeHtml(request.orgName)} has been marked as verified. If a profile draft exists, it is now public on Energy Agora.</p>
+        <table aria-label="Verified profile details">${rows}</table>
+      </section>
+    </main>
+  `;
+}
+
+function formatListingGoalsForReview(value) {
+  const goals = normaliseListingGoals(value);
+  if (!goals.length) return "Profile only";
+  const labels = {
+    members: "Looking for people to join",
+    surplus: "Looking to sell surplus electricity",
+    formation: "Building a new co-op community",
+  };
+  return goals.map((goal) => labels[goal] || goal).join(", ");
+}
+
+function formatAssetsForReview(assets) {
+  if (!Array.isArray(assets) || !assets.length) return "";
+  return assets
+    .map((asset) => [asset.type, asset.detail, asset.value].filter(Boolean).join(" - "))
+    .filter(Boolean)
+    .join("; ");
+}
+
+function formatReviewDate(value) {
+  if (!value) return "";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return value;
+  return new Date(timestamp).toLocaleString();
+}
+
+function displayReviewValue(value) {
+  const text = String(value ?? "").trim();
+  return text || "Not listed";
 }
 
 async function sendAdminEmail(subject, text, fallbackFileName, html = "") {
-  await sendEmail({
+  return sendEmail({
     to: ADMIN_EMAIL,
     subject,
     text,
@@ -711,13 +793,13 @@ async function sendEmail({ to, subject, text, html = "", fallbackFileName }) {
       const errorText = await response.text();
       throw new Error(`Resend email failed: ${response.status} ${errorText}`);
     }
-    return;
+    return true;
   }
 
   if (USE_DATABASE) {
     console.warn("RESEND_API_KEY is not set; email was not sent.");
     console.warn(`${subject}\nTo: ${to}\n${text}`);
-    return;
+    return false;
   }
 
   const eml = [
@@ -728,6 +810,7 @@ async function sendEmail({ to, subject, text, html = "", fallbackFileName }) {
     text,
   ].join("\n");
   fs.writeFileSync(path.join(OUTBOX_DIR, fallbackFileName), eml);
+  return true;
 }
 
 function checkRateLimit(req, res, scope, limit, windowMs) {
