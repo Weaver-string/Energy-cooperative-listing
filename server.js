@@ -90,6 +90,11 @@ async function handleRequest(req, res) {
       return;
     }
 
+    if (req.method === "POST" && url.pathname === "/api/support-messages") {
+      await handleSupportMessage(req, res);
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/auth/logout") {
       await handleLogout(req, res);
       return;
@@ -393,6 +398,43 @@ async function handlePasswordReset(req, res) {
   sendJson(res, 200, { ok: true, message: "Password updated. Please log in with your new password." });
 }
 
+async function handleSupportMessage(req, res) {
+  const body = await readBody(req);
+  const name = cleanText(body.name) || "Energy Agora visitor";
+  const email = String(body.email || "").trim().toLowerCase();
+  const question = cleanText(body.question);
+  const page = cleanText(body.page);
+
+  if (!checkRateLimit(req, res, "support-ip", 10, 15 * 60 * 1000)) return;
+  if (!checkRateLimit(req, res, `support:${email || "unknown"}`, 4, 15 * 60 * 1000)) return;
+
+  if (!email || !question) {
+    sendJson(res, 400, { error: "Email and question are required." });
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    sendJson(res, 400, { error: "Enter a valid email so the engineer can reply." });
+    return;
+  }
+
+  if (question.length < 10) {
+    sendJson(res, 400, { error: "Please add a little more detail to the question." });
+    return;
+  }
+
+  const sent = await sendSupportMessage({ name, email, question, page });
+  if (!sent) {
+    sendJson(res, 503, { error: "The message could not be emailed right now. Please try again later." });
+    return;
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    message: "Your message was sent to a human engineer. They can reply by email.",
+  });
+}
+
 async function handleProfileSubmission(req, res) {
   const body = await readBody(req);
   const profile = body.profile || {};
@@ -619,6 +661,48 @@ async function notifyProfileSubmitted(request, profile, account, baseUrl = PUBLI
   );
 }
 
+async function sendSupportMessage({ name, email, question, page }) {
+  const subject = `Energy Agora technical question from ${name}`;
+  const text = [
+    "A visitor asked for help from a human engineer on Energy Agora.",
+    "",
+    `Name: ${name}`,
+    `Reply email: ${email}`,
+    `Page: ${page || "Not listed"}`,
+    "",
+    "Question:",
+    question,
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:Inter,Arial,sans-serif;color:#121614;line-height:1.5;max-width:640px">
+      <p style="margin:0 0 8px;color:#285dd8;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Human engineer request</p>
+      <h1 style="font-size:26px;line-height:1.15;margin:0 0 12px">A visitor asked for technical help</h1>
+      <table style="border-collapse:collapse;width:100%;border:1px solid #e5ece8;border-radius:12px;overflow:hidden;margin:0 0 22px">
+        <tr>
+          <th style="text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#596560;font-size:13px;width:30%">Name</th>
+          <td style="vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#121614;font-size:14px">${escapeHtml(name)}</td>
+        </tr>
+        <tr>
+          <th style="text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#596560;font-size:13px;width:30%">Reply email</th>
+          <td style="vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#121614;font-size:14px"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></td>
+        </tr>
+        <tr>
+          <th style="text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#596560;font-size:13px;width:30%">Page</th>
+          <td style="vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5ece8;color:#121614;font-size:14px">${escapeHtml(page || "Not listed")}</td>
+        </tr>
+        <tr>
+          <th style="text-align:left;vertical-align:top;padding:10px 12px;color:#596560;font-size:13px;width:30%">Question</th>
+          <td style="vertical-align:top;padding:10px 12px;color:#121614;font-size:14px;white-space:pre-wrap">${escapeHtml(question)}</td>
+        </tr>
+      </table>
+      <p style="margin:0;color:#68736f;font-size:14px">Reply directly to this email to contact the visitor.</p>
+    </div>
+  `;
+
+  return sendAdminEmail(subject, text, `support-${Date.now()}.eml`, html, email);
+}
+
 function getProfileReviewDetails(request, profile = null, account = null) {
   const accountType = account?.accountType === "formation" ? "New co-op community" : "Established cooperative";
   const details = [
@@ -761,17 +845,18 @@ function displayReviewValue(value) {
   return text || "Not listed";
 }
 
-async function sendAdminEmail(subject, text, fallbackFileName, html = "") {
+async function sendAdminEmail(subject, text, fallbackFileName, html = "", replyTo = "") {
   return sendEmail({
     to: ADMIN_EMAIL,
     subject,
     text,
     html,
     fallbackFileName,
+    replyTo,
   });
 }
 
-async function sendEmail({ to, subject, text, html = "", fallbackFileName }) {
+async function sendEmail({ to, subject, text, html = "", fallbackFileName, replyTo = "" }) {
   if (RESEND_API_KEY) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -785,6 +870,7 @@ async function sendEmail({ to, subject, text, html = "", fallbackFileName }) {
         subject,
         text,
         html: html || undefined,
+        reply_to: replyTo || undefined,
       }),
     });
 
@@ -803,11 +889,12 @@ async function sendEmail({ to, subject, text, html = "", fallbackFileName }) {
 
   const eml = [
     `To: ${to}`,
+    replyTo ? `Reply-To: ${replyTo}` : "",
     `Subject: ${subject}`,
     "Content-Type: text/plain; charset=utf-8",
     "",
     text,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
   fs.writeFileSync(path.join(OUTBOX_DIR, fallbackFileName), eml);
   return true;
 }

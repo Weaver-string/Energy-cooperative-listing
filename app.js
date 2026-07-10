@@ -131,6 +131,25 @@ const AuthProvider = {
     }
     return payload;
   },
+
+  async sendSupportMessage({ name, email, question }) {
+    const response = await fetch("/api/support-messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        email,
+        question,
+        page: window.location.href,
+      }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not send your message.");
+    }
+    return payload.message;
+  },
 };
 
 const ProfileProvider = {
@@ -191,6 +210,10 @@ const authAccountHeading = document.querySelector("#auth-account-heading");
 const authSubmitButton = document.querySelector("#auth-submit-button");
 const authOrgName = document.querySelector("#auth-org-name");
 const authCountry = document.querySelector("#auth-country");
+const engineerDialog = document.querySelector("#engineer-dialog");
+const engineerForm = document.querySelector("#engineer-form");
+const engineerStatus = document.querySelector("#engineer-status");
+const engineerSubmitButton = document.querySelector("#engineer-submit-button");
 
 const LIST_COPY = {
   all: {
@@ -285,8 +308,12 @@ function bindEvents() {
   document.querySelector("#reset-profile-button").addEventListener("click", resetCreateForm);
   document.querySelector("#password-reset-button").addEventListener("click", handlePasswordResetRequest);
   document.querySelector("#delete-account-button").addEventListener("click", handleDeleteAccount);
+  document.querySelector("#engineer-help-button").addEventListener("click", openEngineerHelp);
+  document.querySelector("#engineer-close-button").addEventListener("click", closeEngineerHelp);
+  document.querySelector("#engineer-cancel-button").addEventListener("click", closeEngineerHelp);
 
   authForm.addEventListener("submit", handleAuthSubmit);
+  engineerForm.addEventListener("submit", handleEngineerMessageSubmit);
   profileForm.addEventListener("input", updateCreateFormState);
   profileForm.addEventListener("change", updateCreateFormState);
   profileForm.addEventListener("submit", publishProfile);
@@ -438,6 +465,47 @@ function renderProfileList(coops) {
   }
 
   coops.forEach((coop) => profileList.append(createProfileRow(coop)));
+}
+
+function openEngineerHelp() {
+  engineerStatus.textContent = "";
+  if (state.user) {
+    const emailInput = document.querySelector("#engineer-email");
+    const nameInput = document.querySelector("#engineer-name");
+    if (emailInput && !emailInput.value) emailInput.value = state.user.email || "";
+    if (nameInput && !nameInput.value) nameInput.value = state.user.orgName || "";
+  }
+
+  if (engineerDialog.showModal) {
+    engineerDialog.showModal();
+  } else {
+    engineerDialog.setAttribute("open", "");
+  }
+}
+
+function closeEngineerHelp() {
+  if (engineerDialog.open) engineerDialog.close();
+}
+
+async function handleEngineerMessageSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(engineerForm);
+  const name = clean(form.get("name"));
+  const email = clean(form.get("email"));
+  const question = clean(form.get("question"));
+
+  engineerStatus.textContent = "Sending to a human engineer...";
+  engineerSubmitButton.disabled = true;
+
+  try {
+    const message = await AuthProvider.sendSupportMessage({ name, email, question });
+    engineerStatus.textContent = message;
+    engineerForm.reset();
+  } catch (error) {
+    engineerStatus.textContent = error.message;
+  } finally {
+    engineerSubmitButton.disabled = false;
+  }
 }
 
 function renderFormationCountryGroups(coops) {

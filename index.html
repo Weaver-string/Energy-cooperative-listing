@@ -55,10 +55,49 @@
       </label>
 
       <div class="topbar__actions">
+        <button class="button button--light button--engineer" id="engineer-help-button" type="button">Ask a human engineer</button>
         <button class="button button--light" id="login-button" type="button">Log in</button>
         <button class="button button--dark" id="create-button" type="button">List a co-op</button>
       </div>
     </header>
+
+    <dialog class="engineer-dialog" id="engineer-dialog" aria-labelledby="engineer-dialog-title">
+      <form class="engineer-form" id="engineer-form" method="dialog">
+        <div class="engineer-form__header">
+          <div>
+            <p class="eyebrow">Human engineer</p>
+            <h2 id="engineer-dialog-title">Ask a technical question.</h2>
+            <p>This sends a message to Keyse's email. It is not an AI chatbot, and a human will reply by email.</p>
+          </div>
+          <button class="engineer-form__close" id="engineer-close-button" type="button" aria-label="Close help form">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+
+        <div class="field-grid">
+          <label>
+            <span>Your name</span>
+            <input id="engineer-name" name="name" type="text" placeholder="Alex" />
+          </label>
+          <label>
+            <span>Your email</span>
+            <input id="engineer-email" name="email" type="email" placeholder="you@example.com" required />
+          </label>
+        </div>
+
+        <label>
+          <span>What do you need help with?</span>
+          <textarea id="engineer-question" name="question" rows="5" placeholder="Ask about joining a co-op, starting one, listing a profile, or electricity buying." required></textarea>
+        </label>
+
+        <p class="form-note" id="engineer-status" aria-live="polite"></p>
+
+        <div class="form-actions">
+          <button class="button button--light" id="engineer-cancel-button" type="button">Cancel</button>
+          <button class="button button--dark" id="engineer-submit-button" type="submit">Send to human engineer</button>
+        </div>
+      </form>
+    </dialog>
 
     <main class="page">
       <section class="browse-view" id="browse-view" aria-labelledby="browse-title">
