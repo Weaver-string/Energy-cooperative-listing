@@ -63,13 +63,31 @@ const EUROPEAN_COUNTRIES = [
 ];
 
 const formatNumber = new Intl.NumberFormat("en-GB");
+
+async function safeJson(response, fallbackError = "An unexpected error occurred.") {
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (err) {
+    // If JSON parsing fails, we use an empty object
+  }
+  if (!response.ok) {
+    throw new Error(payload.error || `${fallbackError} (Status ${response.status})`);
+  }
+  return payload;
+}
+
 const AuthProvider = {
   async getSession() {
     localStorage.removeItem("energy-agora.session.account");
-    const response = await fetch("/api/auth/session");
-    if (!response.ok) return null;
-    const payload = await response.json();
-    return payload.account || null;
+    try {
+      const response = await fetch("/api/auth/session");
+      if (!response.ok) return null;
+      const payload = await response.json();
+      return payload.account || null;
+    } catch (err) {
+      return null;
+    }
   },
 
   async requestAccess({ email, password, orgName, country, accountType }) {
@@ -79,11 +97,7 @@ const AuthProvider = {
       body: JSON.stringify({ email, password, orgName, country, accountType }),
     });
 
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Could not request listing access.");
-    }
-
+    const payload = await safeJson(response, "Could not request listing access.");
     return {
       ...payload.account,
       isNewAccount: payload.isNewAccount,
@@ -97,11 +111,7 @@ const AuthProvider = {
       body: JSON.stringify({ email, password }),
     });
 
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Could not log in.");
-    }
-
+    const payload = await safeJson(response, "Could not log in.");
     return payload.account;
   },
 
@@ -112,10 +122,7 @@ const AuthProvider = {
       body: JSON.stringify({ email }),
     });
 
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Could not request a password reset.");
-    }
+    const payload = await safeJson(response, "Could not request a password reset.");
     return payload.message || "If an account exists for that email, a password reset link has been sent.";
   },
 
@@ -125,10 +132,7 @@ const AuthProvider = {
 
   async deleteAccount() {
     const response = await fetch("/api/auth/account", { method: "DELETE" });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Could not delete this account.");
-    }
+    const payload = await safeJson(response, "Could not delete this account.");
     return payload;
   },
 
@@ -144,19 +148,20 @@ const AuthProvider = {
       }),
     });
 
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Could not send your message.");
-    }
+    const payload = await safeJson(response, "Could not send your message.");
     return payload.message;
   },
 };
 
 const ProfileProvider = {
   async loadPublished() {
-    const response = await fetch("/api/cooperatives");
-    if (!response.ok) return [];
-    return response.json();
+    try {
+      const response = await fetch("/api/cooperatives");
+      if (!response.ok) return [];
+      return await response.json();
+    } catch (err) {
+      return [];
+    }
   },
 
   async submit(profile) {
@@ -170,10 +175,7 @@ const ProfileProvider = {
       body: JSON.stringify({ profile }),
     });
 
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Could not submit this profile for review.");
-    }
+    const payload = await safeJson(response, "Could not submit this profile for review.");
     return payload;
   },
 };
