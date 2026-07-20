@@ -231,6 +231,13 @@ const customProfileColor = document.querySelector("#custom-profile-color");
 const myProfileButton = document.querySelector("#my-profile-button");
 const myProfileAvatar = document.querySelector("#my-profile-avatar");
 const myProfileLabel = document.querySelector("#my-profile-label");
+const systemDialog = document.querySelector("#system-dialog");
+const systemDialogKicker = document.querySelector("#system-dialog-kicker");
+const systemDialogTitle = document.querySelector("#system-dialog-title");
+const systemDialogMessage = document.querySelector("#system-dialog-message");
+const systemDialogCancel = document.querySelector("#system-dialog-cancel");
+const systemDialogConfirm = document.querySelector("#system-dialog-confirm");
+let systemDialogResolve = null;
 
 const LIST_COPY = {
   all: {
@@ -334,6 +341,12 @@ function bindEvents() {
   document.querySelector("#engineer-help-button").addEventListener("click", openEngineerHelp);
   document.querySelector("#engineer-close-button").addEventListener("click", closeEngineerHelp);
   document.querySelector("#engineer-cancel-button").addEventListener("click", closeEngineerHelp);
+  systemDialogCancel.addEventListener("click", () => closeSystemDialog(false));
+  systemDialogConfirm.addEventListener("click", () => closeSystemDialog(true));
+  systemDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeSystemDialog(false);
+  });
 
   authForm.addEventListener("submit", handleAuthSubmit);
   engineerForm.addEventListener("submit", handleEngineerMessageSubmit);
@@ -511,6 +524,66 @@ function openEngineerHelp() {
 
 function closeEngineerHelp() {
   if (engineerDialog.open) engineerDialog.close();
+}
+
+function showSystemNotice(message, options = {}) {
+  return showSystemDialog({
+    title: options.title || "Notice",
+    message,
+    tone: options.tone || "info",
+    confirmLabel: "OK",
+    showCancel: false,
+  });
+}
+
+function showSystemConfirm(message, options = {}) {
+  return showSystemDialog({
+    title: options.title || "Are you sure?",
+    message,
+    tone: options.tone || "danger",
+    confirmLabel: options.confirmLabel || "Continue",
+    cancelLabel: options.cancelLabel || "Cancel",
+    showCancel: true,
+  });
+}
+
+function showSystemDialog({ title, message, tone, confirmLabel, cancelLabel, showCancel }) {
+  if (systemDialogResolve) closeSystemDialog(false);
+
+  systemDialog.dataset.tone = tone;
+  systemDialogKicker.textContent = tone === "error" || tone === "danger" ? "Needs attention" : "Energy Agora";
+  systemDialogTitle.textContent = title;
+  systemDialogMessage.textContent = message;
+  systemDialogCancel.textContent = cancelLabel || "Cancel";
+  systemDialogConfirm.textContent = confirmLabel || "OK";
+  systemDialogCancel.classList.toggle("is-hidden", !showCancel);
+  systemDialogConfirm.classList.toggle("button--danger", tone === "danger");
+  systemDialogConfirm.classList.toggle("button--dark", tone !== "danger");
+
+  if (systemDialog.showModal) {
+    systemDialog.showModal();
+  } else {
+    systemDialog.setAttribute("open", "");
+  }
+  systemDialogConfirm.focus({ preventScroll: true });
+
+  return new Promise((resolve) => {
+    systemDialogResolve = resolve;
+  });
+}
+
+function closeSystemDialog(result) {
+  if (systemDialog.open) {
+    systemDialog.close();
+  } else {
+    systemDialog.removeAttribute("open");
+  }
+
+  if (systemDialogResolve) {
+    const resolve = systemDialogResolve;
+    systemDialogResolve = null;
+    resolve(result);
+  }
 }
 
 async function handleEngineerMessageSubmit(event) {
@@ -923,7 +996,10 @@ async function publishProfile(event) {
     state.pendingProfile = saved.profile;
     state.myProfile = saved.profile;
   } catch (error) {
-    window.alert(error.message);
+    await showSystemNotice(error.message, {
+      title: "Profile not submitted",
+      tone: "error",
+    });
     return;
   }
 
@@ -961,7 +1037,10 @@ async function handleAuthSubmit(event) {
           accountType: isStartMode ? "formation" : "cooperative",
         });
   } catch (error) {
-    window.alert(error.message);
+    await showSystemNotice(error.message, {
+      title: isLoginMode ? "Login failed" : "Account not created",
+      tone: "error",
+    });
     return;
   }
 
@@ -1016,15 +1095,24 @@ function renderAuthMode() {
 async function handlePasswordResetRequest() {
   const email = clean(document.querySelector("#auth-email").value);
   if (!email) {
-    window.alert("Enter the account email first, then request a reset link.");
+    await showSystemNotice("Enter the account email first, then request a reset link.", {
+      title: "Email needed",
+      tone: "info",
+    });
     return;
   }
 
   try {
     const message = await AuthProvider.requestPasswordReset(email);
-    window.alert(message);
+    await showSystemNotice(message, {
+      title: "Reset email requested",
+      tone: "success",
+    });
   } catch (error) {
-    window.alert(error.message);
+    await showSystemNotice(error.message, {
+      title: "Reset email not sent",
+      tone: "error",
+    });
   }
 }
 
@@ -1055,15 +1143,23 @@ function applyStarterDefaults() {
 async function handleDeleteAccount() {
   if (!state.user) return;
 
-  const confirmed = window.confirm(
+  const confirmed = await showSystemConfirm(
     "Delete this Energy Agora account and remove its profile from the site? This cannot be undone.",
+    {
+      title: "Delete account?",
+      confirmLabel: "Delete account",
+      tone: "danger",
+    },
   );
   if (!confirmed) return;
 
   try {
     await AuthProvider.deleteAccount();
   } catch (error) {
-    window.alert(error.message);
+    await showSystemNotice(error.message, {
+      title: "Account not deleted",
+      tone: "error",
+    });
     return;
   }
 

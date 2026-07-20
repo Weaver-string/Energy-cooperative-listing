@@ -242,6 +242,59 @@ body.is-focused-flow .topbar {
   backdrop-filter: blur(4px);
 }
 
+.system-dialog {
+  width: min(460px, calc(100% - 28px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(18, 22, 20, 0.18);
+}
+
+.system-dialog::backdrop {
+  background: rgba(18, 22, 20, 0.16);
+  backdrop-filter: blur(3px);
+}
+
+.system-dialog__body {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+}
+
+.system-dialog__body::before {
+  content: "";
+  width: 46px;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+}
+
+.system-dialog[data-tone="success"] .system-dialog__body::before {
+  background: var(--green);
+}
+
+.system-dialog[data-tone="error"] .system-dialog__body::before,
+.system-dialog[data-tone="danger"] .system-dialog__body::before {
+  background: #be185d;
+}
+
+.system-dialog h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 2.35rem);
+  line-height: 1;
+}
+
+.system-dialog p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.system-dialog .form-actions {
+  margin-top: 8px;
+}
+
 .engineer-form {
   display: grid;
   gap: 20px;

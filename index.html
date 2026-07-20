@@ -26,7 +26,7 @@
       content="Browse verified energy cooperatives in Europe, compare member joining costs, and find co-ops selling surplus renewable electricity."
     />
     <meta name="twitter:image" content="https://energy-cooperative-listing.vercel.app/assets/network-illustration.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260720-notifications" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -102,6 +102,18 @@
           <button class="button button--dark" id="engineer-submit-button" type="submit">Send to human engineer</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="system-dialog" id="system-dialog" aria-labelledby="system-dialog-title">
+      <div class="system-dialog__body">
+        <p class="eyebrow" id="system-dialog-kicker">Energy Agora</p>
+        <h2 id="system-dialog-title">Notice</h2>
+        <p id="system-dialog-message"></p>
+        <div class="form-actions">
+          <button class="button button--light is-hidden" id="system-dialog-cancel" type="button">Cancel</button>
+          <button class="button button--dark" id="system-dialog-confirm" type="button">OK</button>
+        </div>
+      </div>
     </dialog>
 
     <main class="page">
@@ -487,7 +499,7 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260720-profile-nav"></script>
+    <script src="app.js?v=20260720-notifications"></script>
   </body>
 </html>
 
