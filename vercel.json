@@ -7,5 +7,28 @@
     "api/[...path].js": {
       "maxDuration": 15
     }
-  }
+  },
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/verify\\.html",
+      "dest": "/404.html",
+      "status": 404
+    },
+    {
+      "src": "/api/listing-requests/?",
+      "dest": "/404.html",
+      "status": 404
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/[...path].js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 }

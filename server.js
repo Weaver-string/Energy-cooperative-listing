@@ -423,7 +423,13 @@ async function handleSupportMessage(req, res) {
     return;
   }
 
-  const sent = await sendSupportMessage({ name, email, question, page });
+  let sent = false;
+  try {
+    sent = await sendSupportMessage({ name, email, question, page });
+  } catch (error) {
+    console.error("Support message email failed.", error);
+  }
+
   if (!sent) {
     sendJson(res, 503, { error: "The message could not be emailed right now. Please try again later." });
     return;
@@ -860,6 +866,7 @@ async function sendEmail({ to, subject, text, html = "", fallbackFileName, reply
   if (RESEND_API_KEY) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
+      signal: AbortSignal.timeout(8000),
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
@@ -1018,7 +1025,7 @@ function isStateChangingRequest(req) {
 }
 
 function requiresStorage(pathname) {
-  return pathname.startsWith("/api/") && pathname !== "/api/health";
+  return pathname.startsWith("/api/") && !["/api/health", "/api/support-messages"].includes(pathname);
 }
 
 function isTrustedOrigin(req) {
