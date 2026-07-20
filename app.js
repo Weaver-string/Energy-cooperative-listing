@@ -63,6 +63,8 @@ const EUROPEAN_COUNTRIES = [
 ];
 
 const formatNumber = new Intl.NumberFormat("en-GB");
+const BIO_HELPER_TEXT =
+  "A short public bio will help potential members understand what this cooperative is building.";
 
 async function safeJson(response, fallbackError = "An unexpected error occurred.") {
   let payload = {};
@@ -380,7 +382,7 @@ function getFilteredCoops() {
       coop.country,
       coop.publicContact,
       coop.status,
-      coop.intro,
+      getPublicIntro(coop),
       coop.memberCost,
       coop.electricityCost,
       coop.surplusVolume,
@@ -546,7 +548,10 @@ function createProfileRow(coop) {
   setAvatar(avatar, coop);
   node.querySelector(".profile-row__name").textContent = coop.name;
   node.querySelector(".profile-row__meta").textContent = getRowMeta(coop);
-  node.querySelector(".profile-row__intro").textContent = coop.intro;
+  const intro = getPublicIntro(coop);
+  const introNode = node.querySelector(".profile-row__intro");
+  introNode.textContent = intro;
+  introNode.classList.toggle("is-hidden", !intro);
 
   return node;
 }
@@ -568,6 +573,7 @@ function getProfileMarkup(coop, isPreview) {
   const capacity = Number(coop.capacity || 0);
   const assets = coop.assets || [];
   const purposeText = getPurposeText(coop);
+  const intro = getPublicIntro(coop);
   const contactEmail = coop.publicContact || coop.buyerContact || "";
   const contactButton = contactEmail
     ? `<a class="button button--dark" href="mailto:${escapeHtml(contactEmail)}">${isPreview ? "Preview contact" : "Message"}</a>`
@@ -625,7 +631,7 @@ function getProfileMarkup(coop, isPreview) {
         <p class="eyebrow">${escapeHtml(purposeText)} | ${escapeHtml(verificationStatus)}</p>
         <h1>${escapeHtml(coop.name)}</h1>
         <div class="profile-page__location">${escapeHtml(coop.city)}, ${escapeHtml(coop.country)}</div>
-        <p class="profile-page__intro">${escapeHtml(coop.intro)}</p>
+        ${intro ? `<p class="profile-page__intro">${escapeHtml(intro)}</p>` : ""}
       </header>
 
       <div class="profile-actions">
@@ -807,9 +813,7 @@ function getDraftCoop() {
     buyerMinimum: isListingSurplus ? clean(form.get("buyerMinimum")) : "",
     surplusAvailability: isListingSurplus ? clean(form.get("surplusAvailability")) : "",
     buyerContact: isListingSurplus ? clean(form.get("buyerContact")) : "",
-    intro:
-      clean(form.get("intro")) ||
-      "A short public bio will help potential members understand what this cooperative is building.",
+    intro: clean(form.get("intro")),
     connections: [],
     color: clean(form.get("color")) || "#0e765d",
     photoUrl: state.draftPhotoUrl,
@@ -1129,6 +1133,11 @@ function toNumber(value) {
 
 function clean(value) {
   return String(value || "").trim();
+}
+
+function getPublicIntro(coop) {
+  const intro = clean(coop?.intro);
+  return intro === BIO_HELPER_TEXT ? "" : intro;
 }
 
 function escapeHtml(value) {

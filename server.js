@@ -21,6 +21,8 @@ const USE_DATABASE = Boolean(DATABASE_URL);
 const SESSION_COOKIE = "ea_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 const PASSWORD_RESET_MAX_AGE_MS = 1000 * 60 * 30;
+const PUBLIC_BIO_HELPER_TEXT =
+  "A short public bio will help potential members understand what this cooperative is building.";
 let dbPool = null;
 let storageReadyPromise = null;
 const rateLimitBuckets = new Map();
@@ -500,7 +502,7 @@ async function handleProfileSubmission(req, res) {
     buyerMinimum: listingGoals.includes("surplus") ? cleanText(profile.buyerMinimum) : "",
     surplusAvailability: listingGoals.includes("surplus") ? cleanText(profile.surplusAvailability) : "",
     buyerContact: listingGoals.includes("surplus") ? cleanText(profile.buyerContact) : "",
-    intro: cleanText(profile.intro),
+    intro: cleanPublicIntro(profile.intro),
     connections: [],
     color: cleanText(profile.color) || "#0e765d",
     photoUrl: cleanDataUrl(profile.photoUrl),
@@ -1318,7 +1320,7 @@ function publicProfile(profile) {
     buyerMinimum: profile.buyerMinimum,
     surplusAvailability: profile.surplusAvailability,
     buyerContact: profile.buyerContact,
-    intro: profile.intro,
+    intro: cleanPublicIntro(profile.intro),
     connections: profile.connections,
     color: profile.color,
     photoUrl: profile.photoUrl,
@@ -1387,6 +1389,11 @@ function toNumber(value) {
 
 function cleanText(value) {
   return String(value || "").trim().slice(0, 2000);
+}
+
+function cleanPublicIntro(value) {
+  const intro = cleanText(value);
+  return intro === PUBLIC_BIO_HELPER_TEXT ? "" : intro;
 }
 
 function isValidEmail(value) {
