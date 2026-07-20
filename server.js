@@ -122,6 +122,11 @@ async function handleRequest(req, res) {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/api/profiles/me") {
+      await handleMyProfile(req, res);
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/profiles") {
       await handleProfileSubmission(req, res);
       return;
@@ -549,6 +554,20 @@ function makeListingRequest(account) {
     requestedAt: new Date().toISOString(),
     approvedAt: null,
   };
+}
+
+async function handleMyProfile(req, res) {
+  const account = await getAuthenticatedAccount(req);
+  if (!account) {
+    sendJson(res, 401, { error: "Please log in before viewing your profile." });
+    return;
+  }
+
+  const profiles = await readRecords(COLLECTIONS.profiles);
+  const profile = profiles.find((item) => item.accountId === account.id);
+  sendJson(res, 200, {
+    profile: profile ? ownerProfile(profile) : null,
+  });
 }
 
 async function handleApproveRequest(res, requestId, token) {
@@ -1329,6 +1348,15 @@ function publicProfile(profile) {
   };
 }
 
+function ownerProfile(profile) {
+  return {
+    ...publicProfile(profile),
+    published: Boolean(profile.published),
+    submittedAt: profile.submittedAt,
+    updatedAt: profile.updatedAt,
+  };
+}
+
 function normaliseAssets(assets, capacity) {
   if (Array.isArray(assets) && assets.length) {
     return assets.slice(0, 5).map((asset) => ({
@@ -1393,7 +1421,11 @@ function cleanText(value) {
 
 function cleanPublicIntro(value) {
   const intro = cleanText(value);
-  return intro === PUBLIC_BIO_HELPER_TEXT ? "" : intro;
+  return isBioHelperText(intro) ? "" : intro;
+}
+
+function isBioHelperText(value) {
+  return cleanText(value).replace(/\s+/g, " ").toLowerCase() === PUBLIC_BIO_HELPER_TEXT.toLowerCase();
 }
 
 function isValidEmail(value) {

@@ -9,6 +9,7 @@ const state = {
   selectedId: "",
   draftPhotoUrl: "",
   user: null,
+  myProfile: null,
   pendingProfile: null,
   profileSubmitted: false,
   authMode: "login",
@@ -138,6 +139,13 @@ const AuthProvider = {
     return payload;
   },
 
+  async getMyProfile() {
+    const response = await fetch("/api/profiles/me");
+    if (response.status === 401) return null;
+    const payload = await safeJson(response, "Could not load your profile.");
+    return payload.profile || null;
+  },
+
   async sendSupportMessage({ name, email, question }) {
     const response = await fetch("/api/support-messages", {
       method: "POST",
@@ -220,6 +228,9 @@ const engineerStatus = document.querySelector("#engineer-status");
 const engineerSubmitButton = document.querySelector("#engineer-submit-button");
 const customColorRadio = document.querySelector("#custom-color-radio");
 const customProfileColor = document.querySelector("#custom-profile-color");
+const myProfileButton = document.querySelector("#my-profile-button");
+const myProfileAvatar = document.querySelector("#my-profile-avatar");
+const myProfileLabel = document.querySelector("#my-profile-label");
 
 const LIST_COPY = {
   all: {
@@ -251,6 +262,7 @@ const LIST_COPY = {
 async function init() {
   applyInitialRoute();
   state.user = await AuthProvider.getSession();
+  await syncMyProfile();
   renderCountryFilter();
   bindEvents();
   render();
@@ -274,6 +286,10 @@ async function loadOnlineProfiles() {
   try {
     const onlineProfiles = await ProfileProvider.loadPublished();
     cooperatives = onlineProfiles;
+    if (state.myProfile?.published) {
+      state.myProfile =
+        cooperatives.find((coop) => coop.id === state.myProfile.id) || state.myProfile;
+    }
     renderCountryFilter();
     renderCountryOptions();
     applyApprovedProfileRoute();
@@ -307,6 +323,7 @@ function bindEvents() {
   document.querySelector("#home-button").addEventListener("click", showBrowse);
   document.querySelector("#back-button").addEventListener("click", showBrowse);
   document.querySelector("#login-button").addEventListener("click", handleLoginButton);
+  myProfileButton.addEventListener("click", handleMyProfileButton);
   document.querySelector("#auth-back-button").addEventListener("click", showBrowse);
   document.querySelector("#create-button").addEventListener("click", beginProfileSetup);
   document.querySelector("#create-back-button").addEventListener("click", showBrowse);
@@ -434,7 +451,7 @@ function render() {
   renderShell();
   renderProfileList(filtered);
   renderProfilePage();
-  renderCompactList(filtered);
+  renderCompactList(filtered.filter((coop) => coop.id !== state.selectedId));
 }
 
 function renderShell() {
@@ -451,6 +468,7 @@ function renderShell() {
   document.querySelector("#login-button").textContent = state.user ? "Log out" : "Log in";
   document.querySelector("#create-button").textContent = state.user ? "Edit listing" : "List a co-op";
   renderAuthMode();
+  renderMyProfileShortcut();
   const copy = LIST_COPY[state.audience] || LIST_COPY.all;
   listKicker.textContent = copy.kicker;
   listTitle.textContent = copy.title;
@@ -640,8 +658,6 @@ function getProfileMarkup(coop, isPreview) {
 
       <div class="profile-actions">
         ${contactButton}
-        <button class="button button--light" type="button">Follow</button>
-        <button class="button button--light" type="button">Share</button>
       </div>
 
       <section class="detail-section">
@@ -675,11 +691,15 @@ function getProfileMarkup(coop, isPreview) {
 
 function renderCompactList(coops) {
   sideCount.textContent = coops.length;
+  if (!coops.length) {
+    compactList.innerHTML = '<div class="empty-state empty-state--compact">No other co-ops to show.</div>';
+    return;
+  }
+
   compactList.innerHTML = coops
     .map((coop) => {
-      const activeClass = coop.id === state.selectedId ? " is-active" : "";
       return `
-        <button class="compact-row${activeClass}" type="button" data-id="${escapeHtml(coop.id)}">
+        <button class="compact-row" type="button" data-id="${escapeHtml(coop.id)}">
           ${getAvatarMarkup(coop)}
           <span class="compact-row__text">
             <strong>${escapeHtml(coop.name)}</strong>
@@ -708,10 +728,72 @@ async function handleLoginButton() {
 
   await AuthProvider.signOut();
   state.user = null;
+  state.myProfile = null;
   state.profileSubmitted = false;
   profileForm.reset();
   state.draftPhotoUrl = "";
   showBrowse();
+}
+
+async function syncMyProfile() {
+  state.myProfile = state.user ? await AuthProvider.getMyProfile() : null;
+}
+
+function renderMyProfileShortcut() {
+  if (!state.user) {
+    myProfileButton.classList.add("is-hidden");
+    return;
+  }
+
+  const name = state.myProfile?.name || state.user.orgName || "Your co-op";
+  const profile = state.myProfile || {
+    name,
+    initials: getInitials(name),
+    color: "#0e765d",
+    photoUrl: "",
+  };
+
+  myProfileLabel.textContent = name;
+  setAvatar(myProfileAvatar, profile);
+  myProfileButton.classList.remove("is-hidden");
+}
+
+async function handleMyProfileButton() {
+  if (!state.user) return;
+  await syncMyProfile();
+  if (!state.myProfile) {
+    showCreate();
+    return;
+  }
+
+  await loadOnlineProfiles();
+  const publishedProfile = cooperatives.find((coop) => coop.id === state.myProfile.id);
+  if (publishedProfile) {
+    showDetail(publishedProfile.id);
+    return;
+  }
+
+  showCreate();
+}
+
+function goToMyListing() {
+  state.view = "browse";
+  const publishedProfile = state.myProfile?.published
+    ? cooperatives.find((coop) => coop.id === state.myProfile.id)
+    : null;
+
+  if (publishedProfile) {
+    state.selectedId = publishedProfile.id;
+    state.query = "";
+    state.country = "All";
+    state.asset = "all";
+    if (searchInput) searchInput.value = "";
+    if (assetFilter) assetFilter.value = "all";
+  }
+
+  renderCountryFilter();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function showAuth(mode = "login") {
@@ -839,6 +921,7 @@ async function publishProfile(event) {
   try {
     const saved = await ProfileProvider.submit(profile);
     state.pendingProfile = saved.profile;
+    state.myProfile = saved.profile;
   } catch (error) {
     window.alert(error.message);
     return;
@@ -879,6 +962,13 @@ async function handleAuthSubmit(event) {
         });
   } catch (error) {
     window.alert(error.message);
+    return;
+  }
+
+  await syncMyProfile();
+  if (isLoginMode) {
+    await loadOnlineProfiles();
+    goToMyListing();
     return;
   }
 
@@ -978,6 +1068,7 @@ async function handleDeleteAccount() {
   }
 
   state.user = null;
+  state.myProfile = null;
   state.profileSubmitted = false;
   state.draftPhotoUrl = "";
   profileForm.reset();
@@ -1147,7 +1238,11 @@ function clean(value) {
 
 function getPublicIntro(coop) {
   const intro = clean(coop?.intro);
-  return intro === BIO_HELPER_TEXT ? "" : intro;
+  return isBioHelperText(intro) ? "" : intro;
+}
+
+function isBioHelperText(value) {
+  return clean(value).replace(/\s+/g, " ").toLowerCase() === BIO_HELPER_TEXT.toLowerCase();
 }
 
 function escapeHtml(value) {

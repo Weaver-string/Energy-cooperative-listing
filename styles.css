@@ -63,7 +63,7 @@ svg {
   top: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: auto minmax(260px, 560px) auto;
+  grid-template-columns: auto auto minmax(260px, 560px) auto;
   align-items: center;
   gap: 18px;
   padding: 12px max(22px, calc((100vw - 1180px) / 2));
@@ -77,6 +77,7 @@ body.is-focused-flow .topbar {
 }
 
 .brand,
+.my-profile-button,
 .topbar__actions,
 .global-search,
 .browse-controls,
@@ -108,6 +109,35 @@ body.is-focused-flow .topbar {
   color: var(--ink);
   background: transparent;
   font-weight: 820;
+}
+
+.my-profile-button {
+  min-width: 0;
+  max-width: 230px;
+  gap: 9px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  background: #fff;
+  font-weight: 820;
+}
+
+.my-profile-button:hover {
+  box-shadow: 0 10px 22px rgba(18, 22, 20, 0.08);
+}
+
+.my-profile-button span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-profile-button__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 11px;
+  font-size: 0.72rem;
 }
 
 .brand__mark,
@@ -1206,7 +1236,7 @@ select {
 
 @media (max-width: 900px) {
   .topbar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr auto;
   }
 
   .global-search {
@@ -1237,6 +1267,16 @@ select {
 @media (max-width: 680px) {
   .topbar {
     padding-inline: 12px;
+  }
+
+  .my-profile-button {
+    justify-self: start;
+    max-width: none;
+    padding: 5px;
+  }
+
+  .my-profile-button span:last-child {
+    display: none;
   }
 
   .topbar__actions .button--light:not(.button--engineer) {
