@@ -4,7 +4,7 @@
   "buildCommand": null,
   "outputDirectory": ".",
   "functions": {
-    "api/**/*.js": {
+    "api/[...path].js": {
       "maxDuration": 15
     }
   }
