@@ -218,6 +218,8 @@ const engineerDialog = document.querySelector("#engineer-dialog");
 const engineerForm = document.querySelector("#engineer-form");
 const engineerStatus = document.querySelector("#engineer-status");
 const engineerSubmitButton = document.querySelector("#engineer-submit-button");
+const customColorRadio = document.querySelector("#custom-color-radio");
+const customProfileColor = document.querySelector("#custom-profile-color");
 
 const LIST_COPY = {
   all: {
@@ -326,6 +328,8 @@ function bindEvents() {
   document.querySelector("#new-list-members").addEventListener("change", handleListingPurposeChange);
   document.querySelector("#new-list-surplus").addEventListener("change", handleListingPurposeChange);
   document.querySelector("#new-list-formation").addEventListener("change", handleListingPurposeChange);
+  customProfileColor.addEventListener("input", handleCustomColorChange);
+  customProfileColor.addEventListener("change", handleCustomColorChange);
 
   authModeButtons.forEach((button) => {
     button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
@@ -1015,6 +1019,12 @@ function updateCreateFormState() {
     ? `<img src="${draft.photoUrl}" alt="" />`
     : escapeHtml(draft.initials);
   uploadAvatar.style.background = draft.color;
+}
+
+function handleCustomColorChange() {
+  customColorRadio.value = customProfileColor.value;
+  customColorRadio.checked = true;
+  updateCreateFormState();
 }
 
 function getListingGoals(form) {

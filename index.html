@@ -411,19 +411,26 @@
 
             <section class="form-section">
               <h2>Profile color</h2>
-              <div class="swatches" aria-label="Profile color">
-                <label><input type="radio" name="color" value="#0e765d" checked /><span style="background:#0e765d"></span></label>
-                <label><input type="radio" name="color" value="#2666e8" /><span style="background:#2666e8"></span></label>
-                <label><input type="radio" name="color" value="#bd7d19" /><span style="background:#bd7d19"></span></label>
-                <label><input type="radio" name="color" value="#d85668" /><span style="background:#d85668"></span></label>
-                <label><input type="radio" name="color" value="#7c3aed" /><span style="background:#7c3aed"></span></label>
-                <label><input type="radio" name="color" value="#0891b2" /><span style="background:#0891b2"></span></label>
-                <label><input type="radio" name="color" value="#16a34a" /><span style="background:#16a34a"></span></label>
-                <label><input type="radio" name="color" value="#dc2626" /><span style="background:#dc2626"></span></label>
-                <label><input type="radio" name="color" value="#9333ea" /><span style="background:#9333ea"></span></label>
-                <label><input type="radio" name="color" value="#f97316" /><span style="background:#f97316"></span></label>
-                <label><input type="radio" name="color" value="#0f172a" /><span style="background:#0f172a"></span></label>
-                <label><input type="radio" name="color" value="#be185d" /><span style="background:#be185d"></span></label>
+              <div class="profile-color-controls">
+                <div class="swatches" aria-label="Profile color">
+                  <label><input type="radio" name="color" value="#0e765d" checked /><span style="background:#0e765d"></span></label>
+                  <label><input type="radio" name="color" value="#2666e8" /><span style="background:#2666e8"></span></label>
+                  <label><input type="radio" name="color" value="#bd7d19" /><span style="background:#bd7d19"></span></label>
+                  <label><input type="radio" name="color" value="#d85668" /><span style="background:#d85668"></span></label>
+                  <label><input type="radio" name="color" value="#7c3aed" /><span style="background:#7c3aed"></span></label>
+                  <label><input type="radio" name="color" value="#0891b2" /><span style="background:#0891b2"></span></label>
+                  <label><input type="radio" name="color" value="#16a34a" /><span style="background:#16a34a"></span></label>
+                  <label><input type="radio" name="color" value="#dc2626" /><span style="background:#dc2626"></span></label>
+                  <label><input type="radio" name="color" value="#9333ea" /><span style="background:#9333ea"></span></label>
+                  <label><input type="radio" name="color" value="#f97316" /><span style="background:#f97316"></span></label>
+                  <label><input type="radio" name="color" value="#0f172a" /><span style="background:#0f172a"></span></label>
+                  <label><input type="radio" name="color" value="#be185d" /><span style="background:#be185d"></span></label>
+                </div>
+                <label class="custom-color-picker">
+                  <input id="custom-color-radio" type="radio" name="color" value="#0e765d" />
+                  <span>Custom</span>
+                  <input id="custom-profile-color" type="color" value="#0e765d" aria-label="Choose custom profile color" />
+                </label>
               </div>
             </section>
 
