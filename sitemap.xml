@@ -2,7 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://energy-cooperative-listing.vercel.app/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://energy-cooperative-listing.vercel.app/privacy.html</loc>
+  </url>
+  <url>
+    <loc>https://energy-cooperative-listing.vercel.app/terms.html</loc>
   </url>
 </urlset>

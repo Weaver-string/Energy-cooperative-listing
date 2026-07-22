@@ -339,6 +339,7 @@ function bindEvents() {
   document.querySelector("#password-reset-button").addEventListener("click", handlePasswordResetRequest);
   document.querySelector("#delete-account-button").addEventListener("click", handleDeleteAccount);
   document.querySelector("#engineer-help-button").addEventListener("click", openEngineerHelp);
+  document.querySelector("#footer-engineer-help-button").addEventListener("click", openEngineerHelp);
   document.querySelector("#engineer-close-button").addEventListener("click", closeEngineerHelp);
   document.querySelector("#engineer-cancel-button").addEventListener("click", closeEngineerHelp);
   systemDialogCancel.addEventListener("click", () => closeSystemDialog(false));
@@ -494,7 +495,8 @@ function renderProfileList(coops) {
 
   if (!coops.length) {
     const copy = LIST_COPY[state.audience] || LIST_COPY.all;
-    profileList.innerHTML = `<div class="empty-state">No cooperatives match ${escapeHtml(copy.title.toLowerCase())} yet.</div>`;
+    profileList.innerHTML = getEmptyStateMarkup(copy);
+    bindEmptyStateActions();
     return;
   }
 
@@ -765,7 +767,8 @@ function getProfileMarkup(coop, isPreview) {
 function renderCompactList(coops) {
   sideCount.textContent = coops.length;
   if (!coops.length) {
-    compactList.innerHTML = '<div class="empty-state empty-state--compact">No other co-ops to show.</div>';
+    compactList.innerHTML =
+      '<div class="empty-state empty-state--compact"><strong>No other co-ops yet.</strong><span>As more profiles are verified, related co-ops will appear here.</span></div>';
     return;
   }
 
@@ -806,6 +809,36 @@ async function handleLoginButton() {
   profileForm.reset();
   state.draftPhotoUrl = "";
   showBrowse();
+}
+
+function getEmptyStateMarkup(copy) {
+  const action =
+    state.audience === "formation"
+      ? "Start a co-op community"
+      : state.audience === "surplus"
+        ? "List surplus electricity"
+        : "List a co-op";
+  const detail =
+    state.query || state.country !== "All" || state.asset !== "all"
+      ? "Try clearing a filter, choosing another country, or checking back as new verified profiles are added."
+      : "Energy Agora is still early. Verified co-op profiles will appear here as soon as they are reviewed.";
+
+  return `
+    <div class="empty-state empty-state--rich">
+      <p class="eyebrow">${escapeHtml(copy.kicker)}</p>
+      <h3>No matching profiles yet.</h3>
+      <p>${escapeHtml(detail)}</p>
+      <div class="empty-state__actions">
+        <button class="button button--dark" type="button" data-empty-action="list">${escapeHtml(action)}</button>
+        <button class="button button--light" type="button" data-empty-action="help">Ask a human engineer</button>
+      </div>
+    </div>
+  `;
+}
+
+function bindEmptyStateActions() {
+  profileList.querySelector('[data-empty-action="list"]')?.addEventListener("click", beginProfileSetup);
+  profileList.querySelector('[data-empty-action="help"]')?.addEventListener("click", openEngineerHelp);
 }
 
 async function syncMyProfile() {

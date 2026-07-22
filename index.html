@@ -156,6 +156,30 @@
           <span id="result-count">0 results</span>
         </div>
         <section class="profile-list" id="profile-list" aria-label="Cooperative list"></section>
+
+        <section class="trust-section" aria-labelledby="trust-title">
+          <div>
+            <p class="eyebrow">How Energy Agora works</p>
+            <h2 id="trust-title">Built for people comparing community energy options.</h2>
+            <p>
+              Energy Agora is an independent directory for energy cooperatives and new community energy groups. Co-ops create their own profiles, and listings stay pending until the account and public details have been manually checked.
+            </p>
+          </div>
+          <div class="trust-grid">
+            <article>
+              <h3>Who runs it</h3>
+              <p>Energy Agora is maintained as an independent project to help co-ops explain membership, community goals, and surplus electricity opportunities more clearly.</p>
+            </article>
+            <article>
+              <h3>What verified means</h3>
+              <p>Verified means the listing request has been manually reviewed against the co-op name, submitted email, public records, website, or follow-up correspondence.</p>
+            </article>
+            <article>
+              <h3>What it does not mean</h3>
+              <p>Verification is not financial, legal, engineering, or tariff advice. Members and buyers should still speak directly with the co-op before joining or signing agreements.</p>
+            </article>
+          </div>
+        </section>
       </section>
 
       <section class="detail-view is-hidden" id="detail-view" aria-label="Cooperative profile page">
@@ -483,6 +507,18 @@
       </section>
     </main>
 
+    <footer class="site-footer">
+      <div>
+        <strong>Energy Agora</strong>
+        <p>Independent directory for energy cooperatives, community energy groups, and people comparing membership or electricity-buying options.</p>
+      </div>
+      <nav aria-label="Footer links">
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <button type="button" id="footer-engineer-help-button">Ask a human engineer</button>
+      </nav>
+    </footer>
+
     <template id="profile-row-template">
       <article class="profile-row">
         <button class="profile-row__button" type="button">
@@ -499,7 +535,7 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260720-notifications"></script>
+    <script src="app.js?v=20260722-trust-legal"></script>
   </body>
 </html>
 
