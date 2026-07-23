@@ -259,10 +259,10 @@ const LIST_COPY = {
       "Find cooperatives advertising surplus electricity, business rates, minimum buyer size, or potential PPA discussions.",
   },
   formation: {
-    kicker: "New community groups",
+    kicker: "Starting a co-op",
     title: "Start or join a local energy co-op",
     description:
-      "Find people in your country who are gathering neighbors, choosing a first project, and building a new energy community together.",
+      "Find local groups that are gathering future members, shaping a first project, and looking for neighbors or partners to help the co-op take root.",
   },
 };
 
@@ -484,6 +484,9 @@ function renderShell() {
   renderAuthMode();
   renderMyProfileShortcut();
   const copy = LIST_COPY[state.audience] || LIST_COPY.all;
+  document
+    .querySelector(".list-intro")
+    ?.classList.toggle("list-intro--formation", state.audience === "formation");
   listKicker.textContent = copy.kicker;
   listTitle.textContent = copy.title;
   listDescription.textContent = copy.description;
@@ -818,15 +821,21 @@ function getEmptyStateMarkup(copy) {
       : state.audience === "surplus"
         ? "List surplus electricity"
         : "List a co-op";
+  const heading =
+    state.audience === "formation"
+      ? "No starter co-op communities yet."
+      : "No matching profiles yet.";
   const detail =
-    state.query || state.country !== "All" || state.asset !== "all"
+    state.audience === "formation" && !(state.query || state.country !== "All" || state.asset !== "all")
+      ? "Be the first to create a public recruiting page for people in your area who want to build a community-owned energy project together."
+      : state.query || state.country !== "All" || state.asset !== "all"
       ? "Try clearing a filter, choosing another country, or checking back as new verified profiles are added."
       : "Energy Agora is still early. Verified co-op profiles will appear here as soon as they are reviewed.";
 
   return `
-    <div class="empty-state empty-state--rich">
+    <div class="empty-state empty-state--rich${state.audience === "formation" ? " empty-state--formation" : ""}">
       <p class="eyebrow">${escapeHtml(copy.kicker)}</p>
-      <h3>No matching profiles yet.</h3>
+      <h3>${escapeHtml(heading)}</h3>
       <p>${escapeHtml(detail)}</p>
       <div class="empty-state__actions">
         <button class="button button--dark" type="button" data-empty-action="list">${escapeHtml(action)}</button>
