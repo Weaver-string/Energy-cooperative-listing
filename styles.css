@@ -1545,7 +1545,20 @@ select {
 
 @media (max-width: 680px) {
   .topbar {
+    grid-template-columns: auto 1fr;
     padding-inline: 12px;
+  }
+
+  .topbar__actions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .topbar__actions .button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 10px;
   }
 
   .my-profile-button {
@@ -1558,12 +1571,8 @@ select {
     display: none;
   }
 
-  .topbar__actions .button--light:not(.button--engineer) {
-    display: none;
-  }
-
   .button--engineer {
-    max-width: 138px;
+    max-width: none;
     white-space: normal;
   }
 
