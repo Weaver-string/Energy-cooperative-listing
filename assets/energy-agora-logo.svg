@@ -10,7 +10,7 @@
 
   <rect x="128" y="128" width="768" height="768" rx="154" fill="url(#markGradient)"/>
 
-  <g fill="none" stroke="#f2c56b" stroke-linecap="round" stroke-linejoin="round">
+  <g fill="none" stroke="#fbfbf8" stroke-linecap="round" stroke-linejoin="round">
     <g transform="translate(198 164)" stroke-width="13">
       <path d="M22 38H178"/>
       <path d="M42 74H158"/>
@@ -52,7 +52,7 @@
     x="512"
     y="615"
     text-anchor="middle"
-    fill="#f2c56b"
+    fill="#fbfbf8"
     font-family="Avenir Next, Trebuchet MS, Verdana, sans-serif"
     font-size="238"
     font-weight="620"
