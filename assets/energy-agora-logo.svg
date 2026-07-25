@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Energy Agora logo stencil pillar concept</title>
+  <desc id="desc">A simple rounded blue and green Energy Agora mark with soft EA letters and two stenciled Roman pillars.</desc>
+  <defs>
+    <linearGradient id="markGradient" x1="156" y1="868" x2="868" y2="156" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#08745c"/>
+      <stop offset="1" stop-color="#285dd8"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="128" y="128" width="768" height="768" rx="154" fill="url(#markGradient)"/>
+
+  <g fill="none" stroke="#f2c56b" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(198 164)" stroke-width="13">
+      <path d="M22 38H178"/>
+      <path d="M42 74H158"/>
+      <path d="M58 108H142"/>
+      <path d="M58 108C35 112 27 134 38 153C49 172 77 165 75 143C74 128 55 128 52 143"/>
+      <path d="M142 108C165 112 173 134 162 153C151 172 123 165 125 143C126 128 145 128 148 143"/>
+      <path d="M66 178H134"/>
+      <path d="M55 218V548"/>
+      <path d="M85 218V548"/>
+      <path d="M115 218V548"/>
+      <path d="M145 218V548"/>
+      <path d="M66 588H134"/>
+      <path d="M52 622H148"/>
+      <path d="M36 658H164"/>
+      <path d="M58 622C35 618 27 596 38 577C49 558 77 565 75 587C74 602 55 602 52 587"/>
+      <path d="M142 622C165 618 173 596 162 577C151 558 123 565 125 587C126 602 145 602 148 587"/>
+    </g>
+
+    <g transform="translate(626 164)" stroke-width="13">
+      <path d="M22 38H178"/>
+      <path d="M42 74H158"/>
+      <path d="M58 108H142"/>
+      <path d="M58 108C35 112 27 134 38 153C49 172 77 165 75 143C74 128 55 128 52 143"/>
+      <path d="M142 108C165 112 173 134 162 153C151 172 123 165 125 143C126 128 145 128 148 143"/>
+      <path d="M66 178H134"/>
+      <path d="M55 218V548"/>
+      <path d="M85 218V548"/>
+      <path d="M115 218V548"/>
+      <path d="M145 218V548"/>
+      <path d="M66 588H134"/>
+      <path d="M52 622H148"/>
+      <path d="M36 658H164"/>
+      <path d="M58 622C35 618 27 596 38 577C49 558 77 565 75 587C74 602 55 602 52 587"/>
+      <path d="M142 622C165 618 173 596 162 577C151 558 123 565 125 587C126 602 145 602 148 587"/>
+    </g>
+  </g>
+
+  <text
+    x="512"
+    y="615"
+    text-anchor="middle"
+    fill="#f2c56b"
+    font-family="Avenir Next, Trebuchet MS, Verdana, sans-serif"
+    font-size="238"
+    font-weight="620"
+    letter-spacing="-16">EA</text>
+</svg>

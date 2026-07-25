@@ -157,6 +157,12 @@ body.is-focused-flow .topbar {
   box-shadow: 0 10px 20px rgba(8, 116, 92, 0.18);
 }
 
+.brand__mark--image {
+  display: block;
+  object-fit: cover;
+  background: transparent;
+}
+
 .global-search {
   gap: 10px;
   min-width: 0;
