@@ -339,7 +339,6 @@ function bindEvents() {
   document.querySelector("#password-reset-button").addEventListener("click", handlePasswordResetRequest);
   document.querySelector("#delete-account-button").addEventListener("click", handleDeleteAccount);
   document.querySelector("#engineer-help-button").addEventListener("click", openEngineerHelp);
-  document.querySelector("#footer-engineer-help-button").addEventListener("click", openEngineerHelp);
   document.querySelector("#engineer-close-button").addEventListener("click", closeEngineerHelp);
   document.querySelector("#engineer-cancel-button").addEventListener("click", closeEngineerHelp);
   systemDialogCancel.addEventListener("click", () => closeSystemDialog(false));
@@ -839,7 +838,6 @@ function getEmptyStateMarkup(copy) {
       <p>${escapeHtml(detail)}</p>
       <div class="empty-state__actions">
         <button class="button button--dark" type="button" data-empty-action="list">${escapeHtml(action)}</button>
-        <button class="button button--light" type="button" data-empty-action="help">Ask a human engineer</button>
       </div>
     </div>
   `;
@@ -847,7 +845,6 @@ function getEmptyStateMarkup(copy) {
 
 function bindEmptyStateActions() {
   profileList.querySelector('[data-empty-action="list"]')?.addEventListener("click", beginProfileSetup);
-  profileList.querySelector('[data-empty-action="help"]')?.addEventListener("click", openEngineerHelp);
 }
 
 async function syncMyProfile() {
