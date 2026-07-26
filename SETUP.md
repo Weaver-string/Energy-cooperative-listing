@@ -35,13 +35,13 @@ Recommended no-card stack:
 ```text
 DATABASE_URL=postgresql://...
 DATABASE_SSL=true
-PUBLIC_BASE_URL=https://your-vercel-url.vercel.app
+PUBLIC_BASE_URL=https://energyagora.org
 RESEND_API_KEY=your_resend_api_key
-RESEND_FROM=Energy Agora <verified-sender@yourdomain.com>
+RESEND_FROM=Energy Agora <support@energyagora.org>
 ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
 ```
 
-After the first deployment, copy the generated Vercel URL back into `PUBLIC_BASE_URL`, then redeploy. Approval links use this value.
+After connecting the custom domain, set `PUBLIC_BASE_URL` to `https://energyagora.org`, then redeploy. Approval and password reset links use this value.
 Vercel requires `DATABASE_URL`; the serverless filesystem should not be used for account/profile data.
 Resend is required on Vercel for real emails, including your private approval emails and user password reset links.
 
@@ -59,7 +59,7 @@ PUBLIC_BASE_URL=https://your-render-url.onrender.com
 DATABASE_URL=postgresql://...
 DATABASE_SSL=true
 RESEND_API_KEY=your_resend_api_key
-RESEND_FROM=Energy Agora <verified-sender@yourdomain.com>
+RESEND_FROM=Energy Agora <support@energyagora.org>
 ADMIN_VERIFICATION_EMAIL=keyse00ali@gmail.com
 ```
 
@@ -82,10 +82,10 @@ Energy Agora includes homepage search metadata, social sharing tags, structured 
 After deployment, submit this sitemap in Google Search Console:
 
 ```text
-https://energy-cooperative-listing.vercel.app/sitemap.xml
+https://energyagora.org/sitemap.xml
 ```
 
-If you add a custom domain later, update the homepage canonical URLs, `robots.txt`, and `sitemap.xml`, then submit the new sitemap.
+If you change domains later, update the homepage canonical URLs, `robots.txt`, and `sitemap.xml`, then submit the new sitemap.
 
 ## Authentication
 
