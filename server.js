@@ -5,6 +5,7 @@ const path = require("node:path");
 const { URL } = require("node:url");
 
 const PORT = Number(process.env.PORT || 4173);
+const DEFAULT_PUBLIC_BASE_URL = `http://localhost:${PORT}`;
 const ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, "data");
 const OUTBOX_DIR = path.join(DATA_DIR, "outbox");
@@ -13,7 +14,7 @@ const REQUESTS_FILE = path.join(DATA_DIR, "listing-requests.json");
 const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const ADMIN_EMAIL = process.env.ADMIN_VERIFICATION_EMAIL || "keyse00ali@gmail.com";
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+const PUBLIC_BASE_URL = normalisePublicBaseUrl(process.env.PUBLIC_BASE_URL, DEFAULT_PUBLIC_BASE_URL);
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM || "Energy Agora <onboarding@resend.dev>";
 const DATABASE_URL = process.env.DATABASE_URL || "";
@@ -1027,6 +1028,21 @@ function getClientIp(req) {
   return forwarded || req.socket?.remoteAddress || "unknown";
 }
 
+function normalisePublicBaseUrl(value, fallback) {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+
+  const firstToken = raw.split(/\s+/)[0];
+  const candidate = /^https?:\/\//i.test(firstToken) ? firstToken : `https://${firstToken}`;
+
+  try {
+    return new URL(candidate).origin;
+  } catch (error) {
+    console.warn(`Ignoring invalid PUBLIC_BASE_URL value: ${raw}`);
+    return fallback;
+  }
+}
+
 function hashToken(token) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
@@ -1124,7 +1140,8 @@ function isTrustedOrigin(req) {
 
   try {
     const publicOrigin = new URL(PUBLIC_BASE_URL).origin;
-    const hostOrigin = `${PUBLIC_BASE_URL.startsWith("https://") ? "https" : "http"}://${req.headers.host}`;
+    const protocol = String(req.headers["x-forwarded-proto"] || (isLocalRequest(req) ? "http" : "https")).split(",")[0];
+    const hostOrigin = `${protocol}://${req.headers.host}`;
     return origin === publicOrigin || origin === hostOrigin;
   } catch {
     return false;
