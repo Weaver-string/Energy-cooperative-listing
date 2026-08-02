@@ -93,7 +93,16 @@ async function handleRequest(req, res) {
     }
 
     if (req.method === "POST" && url.pathname === "/api/support-messages") {
-      await handleSupportMessage(req, res);
+      try {
+        await handleSupportMessage(req, res);
+      } catch (error) {
+        console.error("Support message route failed.", error);
+        if (!res.headersSent) {
+          sendJson(res, 503, {
+            error: "Your message could not be sent right now. Please try again in a few minutes.",
+          });
+        }
+      }
       return;
     }
 
@@ -406,7 +415,15 @@ async function handlePasswordReset(req, res) {
 }
 
 async function handleSupportMessage(req, res) {
-  const body = await readBody(req);
+  let body;
+  try {
+    body = await readBody(req);
+  } catch (error) {
+    console.error("Support message body could not be read.", error);
+    sendJson(res, 400, { error: "Could not read your message. Please refresh and try again." });
+    return;
+  }
+
   const name = cleanText(body.name) || "Energy Agora visitor";
   const email = String(body.email || "").trim().toLowerCase();
   const question = cleanText(body.question);
@@ -438,7 +455,9 @@ async function handleSupportMessage(req, res) {
   }
 
   if (!sent) {
-    sendJson(res, 503, { error: "The message could not be emailed right now. Please try again later." });
+    sendJson(res, 503, {
+      error: "The message could not be emailed right now. Please try again in a few minutes.",
+    });
     return;
   }
 
@@ -885,27 +904,26 @@ async function sendAdminEmail(subject, text, fallbackFileName, html = "", replyT
 
 async function sendEmail({ to, subject, text, html = "", fallbackFileName, replyTo = "" }) {
   if (RESEND_API_KEY) {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      signal: AbortSignal.timeout(8000),
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: RESEND_FROM,
-        to,
-        subject,
-        text,
-        html: html || undefined,
-        reply_to: replyTo || undefined,
-      }),
-    });
+    const payload = {
+      from: RESEND_FROM,
+      to,
+      subject,
+      text,
+      html: html || undefined,
+      reply_to: replyTo || undefined,
+    };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Resend email failed: ${response.status} ${errorText}`);
+    try {
+      await sendResendEmail(payload);
+    } catch (error) {
+      if (!shouldRetryWithResendOnboarding(error, to)) throw error;
+      console.warn("Custom Resend sender failed; retrying admin email with onboarding@resend.dev.", error.message);
+      await sendResendEmail({
+        ...payload,
+        from: "Energy Agora <onboarding@resend.dev>",
+      });
     }
+
     return true;
   }
 
@@ -925,6 +943,57 @@ async function sendEmail({ to, subject, text, html = "", fallbackFileName, reply
   ].filter(Boolean).join("\n");
   fs.writeFileSync(path.join(OUTBOX_DIR, fallbackFileName), eml);
   return true;
+}
+
+async function sendResendEmail(payload) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    signal: getTimeoutSignal(8000),
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const detail = getProviderErrorDetail(errorText);
+    const error = new Error(`Resend email failed: ${response.status} ${detail}`);
+    error.statusCode = response.status;
+    error.providerDetail = detail;
+    throw error;
+  }
+}
+
+function getTimeoutSignal(milliseconds) {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(milliseconds);
+  }
+
+  return undefined;
+}
+
+function getProviderErrorDetail(errorText) {
+  try {
+    const parsed = JSON.parse(errorText);
+    return parsed.message || parsed.error || errorText;
+  } catch {
+    return errorText;
+  }
+}
+
+function shouldRetryWithResendOnboarding(error, to) {
+  if (to !== ADMIN_EMAIL) return false;
+  if (RESEND_FROM.includes("onboarding@resend.dev")) return false;
+
+  const message = String(error?.providerDetail || error?.message || "").toLowerCase();
+  return (
+    message.includes("domain") ||
+    message.includes("from") ||
+    message.includes("sender") ||
+    message.includes("verify")
+  );
 }
 
 function checkRateLimit(req, res, scope, limit, windowMs) {
