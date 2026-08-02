@@ -13,6 +13,7 @@ const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const REQUESTS_FILE = path.join(DATA_DIR, "listing-requests.json");
 const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
+const SUPPORT_MESSAGES_FILE = path.join(DATA_DIR, "support-messages.json");
 const ADMIN_EMAIL = process.env.ADMIN_VERIFICATION_EMAIL || "keyse00ali@gmail.com";
 const PUBLIC_BASE_URL = normalisePublicBaseUrl(process.env.PUBLIC_BASE_URL, DEFAULT_PUBLIC_BASE_URL);
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -33,6 +34,7 @@ const COLLECTIONS = {
   requests: "listing-requests",
   profiles: "profiles",
   sessions: "sessions",
+  supportMessages: "support-messages",
 };
 
 const COLLECTION_FILES = {
@@ -40,6 +42,7 @@ const COLLECTION_FILES = {
   [COLLECTIONS.requests]: REQUESTS_FILE,
   [COLLECTIONS.profiles]: PROFILES_FILE,
   [COLLECTIONS.sessions]: SESSIONS_FILE,
+  [COLLECTIONS.supportMessages]: SUPPORT_MESSAGES_FILE,
 };
 
 const MIME_TYPES = {
@@ -449,13 +452,23 @@ async function handleSupportMessage(req, res) {
   }
 
   let sent = false;
+  let sendError = null;
   try {
     sent = await sendSupportMessage({ name, email, question, page });
   } catch (error) {
+    sendError = error;
     console.error("Support message email failed.", error);
   }
 
-  if (!sent) {
+  let saved = false;
+  try {
+    saved = await saveSupportMessageRecord({ name, email, question, page, emailSent: sent });
+  } catch (error) {
+    console.error("Support message could not be saved.", error);
+  }
+
+  if (!sent && !saved) {
+    if (sendError) console.error("Support message failed with no saved fallback.", sendError);
     sendJson(res, 503, {
       error: "The message could not be emailed right now. Please try again in a few minutes.",
     });
@@ -464,7 +477,9 @@ async function handleSupportMessage(req, res) {
 
   sendJson(res, 200, {
     ok: true,
-    message: "Your message was sent to a human engineer. They can reply by email.",
+    message: sent
+      ? "Your message was sent to a human engineer. They can reply by email."
+      : "Your message was received. A human engineer can reply by email.",
   });
 }
 
@@ -748,6 +763,24 @@ async function sendSupportMessage({ name, email, question, page }) {
   `;
 
   return sendAdminEmail(subject, text, `support-${Date.now()}.eml`, html, email);
+}
+
+async function saveSupportMessageRecord({ name, email, question, page, emailSent }) {
+  await ensureStorageReady();
+  const messages = await readRecords(COLLECTIONS.supportMessages);
+
+  messages.unshift({
+    id: crypto.randomUUID(),
+    name,
+    email,
+    question,
+    page,
+    emailSent: Boolean(emailSent),
+    createdAt: new Date().toISOString(),
+  });
+
+  await writeRecords(COLLECTIONS.supportMessages, messages.slice(0, 500));
+  return true;
 }
 
 function getProfileReviewDetails(request, profile = null, account = null) {
@@ -1178,6 +1211,7 @@ function ensureDataFiles() {
   if (!fs.existsSync(REQUESTS_FILE)) writeJson(REQUESTS_FILE, []);
   if (!fs.existsSync(PROFILES_FILE)) writeJson(PROFILES_FILE, []);
   if (!fs.existsSync(SESSIONS_FILE)) writeJson(SESSIONS_FILE, []);
+  if (!fs.existsSync(SUPPORT_MESSAGES_FILE)) writeJson(SUPPORT_MESSAGES_FILE, []);
 }
 
 async function readRecords(collection) {
