@@ -917,12 +917,9 @@ async function sendEmail({ to, subject, text, html = "", fallbackFileName, reply
     try {
       await sendResendEmail(payload);
     } catch (error) {
-      if (!shouldRetryWithResendOnboarding(error, to)) throw error;
-      console.warn("Custom Resend sender failed; retrying admin email with onboarding@resend.dev.", error.message);
-      await sendResendEmail({
-        ...payload,
-        from: "Energy Agora <onboarding@resend.dev>",
-      });
+      if (!canRetryAdminEmailWithResendOnboarding(to)) throw error;
+      console.warn("Resend sender failed; retrying admin email with onboarding@resend.dev.", error.message);
+      await sendResendEmail(getResendOnboardingFallbackPayload(payload));
     }
 
     return true;
@@ -984,17 +981,20 @@ function getProviderErrorDetail(errorText) {
   }
 }
 
-function shouldRetryWithResendOnboarding(error, to) {
+function canRetryAdminEmailWithResendOnboarding(to) {
   if (to !== ADMIN_EMAIL) return false;
   if (RESEND_FROM.includes("onboarding@resend.dev")) return false;
+  return true;
+}
 
-  const message = String(error?.providerDetail || error?.message || "").toLowerCase();
-  return (
-    message.includes("domain") ||
-    message.includes("from") ||
-    message.includes("sender") ||
-    message.includes("verify")
-  );
+function getResendOnboardingFallbackPayload(payload) {
+  return {
+    from: "Energy Agora <onboarding@resend.dev>",
+    to: ADMIN_EMAIL,
+    subject: payload.subject,
+    text: payload.text,
+    html: payload.html,
+  };
 }
 
 function checkRateLimit(req, res, scope, limit, windowMs) {
