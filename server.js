@@ -56,6 +56,144 @@ const MIME_TYPES = {
   ".svg": "image/svg+xml",
 };
 
+const OFFICIAL_COOP_PROFILES = [
+  {
+    id: "som-energia",
+    accountId: "official-directory-som-energia",
+    name: "Som Energia",
+    initials: "SE",
+    city: "Girona",
+    country: "Spain",
+    intro:
+      "Renewable energy cooperative based in Girona, supplying green electricity and developing member-backed renewable generation.",
+    members: 87432,
+    capacity: 0,
+    listingGoals: ["members"],
+    openMembers: true,
+    status: "Open membership",
+    publicContact: "",
+    assets: [
+      {
+        type: "Solar",
+        detail: "Small, local renewable energy plants promoted by the cooperative.",
+        value: "71.11 GWh/year production",
+      },
+    ],
+    memberCost: "EUR 100 capital contribution",
+    electricityCost: "",
+    formationStage: "",
+    foundingMemberTarget: "",
+    formationShareCost: "",
+    plannedAssets: "",
+    utilityNeeds: "",
+    communityGoals: "",
+    liaisonSupport: false,
+    sellsSurplus: false,
+    surplusVolume: "",
+    surplusRate: "",
+    buyerMinimum: "",
+    surplusAvailability: "",
+    buyerContact: "",
+    needs: "",
+    connections: "",
+    color: "#f59e0b",
+    photoUrl: "",
+    verificationStatus: "verified",
+    published: true,
+    publishedAt: "2026-08-04T00:00:00.000Z",
+  },
+  {
+    id: "ecopower",
+    accountId: "official-directory-ecopower",
+    name: "Ecopower",
+    initials: "EP",
+    city: "Berchem",
+    country: "Belgium",
+    intro:
+      "Belgian citizen energy cooperative investing in wind, solar, batteries, and other renewable projects, with members able to buy cooperative electricity.",
+    members: 73000,
+    capacity: 0,
+    listingGoals: ["members"],
+    openMembers: true,
+    status: "Open membership",
+    publicContact: "",
+    assets: [
+      {
+        type: "Wind",
+        detail: "Wind and solar projects, plus battery and community energy investments.",
+        value: "",
+      },
+    ],
+    memberCost: "EUR 250 share",
+    electricityCost: "",
+    formationStage: "",
+    foundingMemberTarget: "",
+    formationShareCost: "",
+    plannedAssets: "",
+    utilityNeeds: "",
+    communityGoals: "",
+    liaisonSupport: false,
+    sellsSurplus: false,
+    surplusVolume: "",
+    surplusRate: "",
+    buyerMinimum: "",
+    surplusAvailability: "",
+    buyerContact: "",
+    needs: "",
+    connections: "",
+    color: "#8ac540",
+    photoUrl: "",
+    verificationStatus: "verified",
+    published: true,
+    publishedAt: "2026-08-04T00:00:00.000Z",
+  },
+  {
+    id: "coopernico",
+    accountId: "official-directory-coopernico",
+    name: "Coopernico",
+    initials: "CO",
+    city: "Lisbon",
+    country: "Portugal",
+    intro:
+      "Portuguese renewable energy cooperative for membership, fair electricity supply in mainland Portugal, and investment in renewable production.",
+    members: 7146,
+    capacity: 0,
+    listingGoals: ["members"],
+    openMembers: true,
+    status: "Open membership",
+    publicContact: "coopernico@coopernico.org",
+    assets: [
+      {
+        type: "Solar",
+        detail: "Renewable electricity production investments in Portugal.",
+        value: "EUR 2,494,527.74 invested",
+      },
+    ],
+    memberCost: "At least three social capital titles",
+    electricityCost: "",
+    formationStage: "",
+    foundingMemberTarget: "",
+    formationShareCost: "",
+    plannedAssets: "",
+    utilityNeeds: "",
+    communityGoals: "",
+    liaisonSupport: false,
+    sellsSurplus: false,
+    surplusVolume: "",
+    surplusRate: "",
+    buyerMinimum: "",
+    surplusAvailability: "",
+    buyerContact: "cliente@coopernico.org",
+    needs: "",
+    connections: "",
+    color: "#0ea5a8",
+    photoUrl: "",
+    verificationStatus: "verified",
+    published: true,
+    publishedAt: "2026-08-04T00:00:00.000Z",
+  },
+];
+
 const server = http.createServer(handleRequest);
 
 async function handleRequest(req, res) {
@@ -127,10 +265,13 @@ async function handleRequest(req, res) {
 
     if (req.method === "GET" && url.pathname === "/api/cooperatives") {
       const profiles = await readRecords(COLLECTIONS.profiles);
+      const publishedProfiles = profiles.filter((profile) => profile.published);
+      const publishedIds = new Set(publishedProfiles.map((profile) => profile.id));
+      const officialProfiles = OFFICIAL_COOP_PROFILES.filter((profile) => !publishedIds.has(profile.id));
       sendJson(
         res,
         200,
-        profiles.filter((profile) => profile.published).map(publicProfile),
+        [...publishedProfiles, ...officialProfiles].map(publicProfile),
       );
       return;
     }
