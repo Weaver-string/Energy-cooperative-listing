@@ -1623,7 +1623,7 @@ function normaliseAssets(assets, capacity) {
     return assets.slice(0, 5).map((asset) => ({
       type: cleanText(asset.type) || "Member-owned energy",
       detail: cleanText(asset.detail) || "Cooperative portfolio",
-      value: cleanText(asset.value) || `${toNumber(capacity).toFixed(1)} MW`,
+      value: cleanText(asset.value) || (toNumber(capacity) ? `${toNumber(capacity).toFixed(1)} MW` : ""),
     }));
   }
 
@@ -1632,7 +1632,7 @@ function normaliseAssets(assets, capacity) {
     {
       type: "Member-owned energy",
       detail: "Cooperative portfolio",
-      value: numericCapacity ? `${numericCapacity.toFixed(1)} MW` : "Not listed",
+      value: numericCapacity ? `${numericCapacity.toFixed(1)} MW` : "",
     },
   ];
 }

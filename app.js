@@ -666,10 +666,11 @@ function renderProfilePage() {
 }
 
 function getProfileMarkup(coop, isPreview) {
-  const memberCost = coop.memberCost || "Not listed";
-  const electricityCost = coop.electricityCost || "Not listed";
+  const memberCost = coop.memberCost || "";
+  const electricityCost = coop.electricityCost || "";
   const verificationStatus = coop.verificationStatus || "Pending manual review";
-  const capacity = Number(coop.capacity || 0);
+  const capacityText = formatCapacity(coop.capacity);
+  const memberCountText = coop.members ? formatNumber.format(coop.members) : "";
   const assets = coop.assets || [];
   const purposeText = getPurposeText(coop);
   const intro = getPublicIntro(coop);
@@ -683,9 +684,9 @@ function getProfileMarkup(coop, isPreview) {
         <h2>For people joining early</h2>
         <div class="profile-meta-grid profile-meta-grid--compact">
           <div class="detail-stat"><span>Right now</span><strong>${escapeHtml(coop.formationStage || "Gathering interested people")}</strong></div>
-          <div class="detail-stat"><span>People needed</span><strong>${escapeHtml(coop.foundingMemberTarget || "Not listed")}</strong></div>
-          <div class="detail-stat"><span>Early share</span><strong>${escapeHtml(coop.formationShareCost || coop.memberCost || "Not listed")}</strong></div>
-          <div class="detail-stat"><span>First idea</span><strong>${escapeHtml(coop.plannedAssets || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>People needed</span><strong>${escapeHtml(coop.foundingMemberTarget || "")}</strong></div>
+          <div class="detail-stat"><span>Early share</span><strong>${escapeHtml(coop.formationShareCost || coop.memberCost || "")}</strong></div>
+          <div class="detail-stat"><span>First idea</span><strong>${escapeHtml(coop.plannedAssets || "")}</strong></div>
         </div>
         ${coop.communityGoals ? `<p><strong>Community goals:</strong> ${escapeHtml(coop.communityGoals)}</p>` : ""}
         ${coop.utilityNeeds ? `<p><strong>Help wanted:</strong> ${escapeHtml(coop.utilityNeeds)}</p>` : ""}
@@ -710,9 +711,9 @@ function getProfileMarkup(coop, isPreview) {
       <section class="detail-section">
         <h2>For buyers looking for electricity</h2>
         <div class="profile-meta-grid profile-meta-grid--compact">
-          <div class="detail-stat"><span>Available surplus</span><strong>${escapeHtml(coop.surplusVolume || "Not listed")}</strong></div>
-          <div class="detail-stat"><span>Business rate</span><strong>${escapeHtml(coop.surplusRate || "Not listed")}</strong></div>
-          <div class="detail-stat"><span>Minimum buyer</span><strong>${escapeHtml(coop.buyerMinimum || "Not listed")}</strong></div>
+          <div class="detail-stat"><span>Available surplus</span><strong>${escapeHtml(coop.surplusVolume || "")}</strong></div>
+          <div class="detail-stat"><span>Business rate</span><strong>${escapeHtml(coop.surplusRate || "")}</strong></div>
+          <div class="detail-stat"><span>Minimum buyer</span><strong>${escapeHtml(coop.buyerMinimum || "")}</strong></div>
         </div>
         ${
           coop.surplusAvailability
@@ -739,12 +740,12 @@ function getProfileMarkup(coop, isPreview) {
 
       <section class="detail-section">
         <h2>Contact</h2>
-        <p>${contactEmail ? `<a href="mailto:${escapeHtml(contactEmail)}">${escapeHtml(contactEmail)}</a>` : "Contact email not listed."}</p>
+        <p>${contactEmail ? `<a href="mailto:${escapeHtml(contactEmail)}">${escapeHtml(contactEmail)}</a>` : ""}</p>
       </section>
 
       <section class="profile-meta-grid" aria-label="Profile statistics">
-        <div class="detail-stat"><span>Members</span><strong>${formatNumber.format(coop.members || 0)}</strong></div>
-        <div class="detail-stat"><span>Owned capacity</span><strong>${capacity.toFixed(1)} MW</strong></div>
+        <div class="detail-stat"><span>Members</span><strong>${memberCountText}</strong></div>
+        <div class="detail-stat"><span>Owned capacity</span><strong>${capacityText}</strong></div>
         <div class="detail-stat"><span>Verification</span><strong>${escapeHtml(verificationStatus)}</strong></div>
       </section>
 
@@ -781,7 +782,7 @@ function renderCompactList(coops) {
           ${getAvatarMarkup(coop)}
           <span class="compact-row__text">
             <strong>${escapeHtml(coop.name)}</strong>
-            <span>${escapeHtml(coop.city)} | ${escapeHtml(Number(coop.capacity || 0).toFixed(1))} MW</span>
+            <span>${escapeHtml(joinMetaParts([coop.city, formatCapacity(coop.capacity)]))}</span>
           </span>
         </button>
       `;
@@ -976,7 +977,7 @@ function getDraftCoop() {
   const city = clean(form.get("city")) || "City";
   const country = clean(form.get("country")) || "Country";
   const capacity = toNumber(form.get("capacity"));
-  const assetValue = capacity ? `${capacity.toFixed(1)} MW` : "Not listed";
+  const assetValue = capacity ? `${capacity.toFixed(1)} MW` : "";
   const listingGoals = getListingGoals(form);
   const isListingMembers = listingGoals.includes("members");
   const isListingSurplus = listingGoals.includes("surplus");
@@ -1281,29 +1282,49 @@ function getPurposeText(coop) {
   return purposes.join(" + ") || "Profile only";
 }
 
+function formatCapacity(value) {
+  const capacity = Number(value || 0);
+  return capacity > 0 ? `${capacity.toFixed(1)} MW` : "";
+}
+
+function joinMetaParts(parts) {
+  return parts.filter((part) => String(part || "").trim()).join(" / ");
+}
+
 function getRowMeta(coop) {
   const location = `${coop.city}, ${coop.country}`;
   if (state.audience === "surplus" && listsSurplus(coop)) {
-    return `${location} / ${coop.surplusVolume || "Surplus available"} / ${coop.surplusRate || "Rate not listed"} / ${coop.buyerMinimum || "Buyer size flexible"}`;
+    return joinMetaParts([location, coop.surplusVolume || "Surplus available", coop.surplusRate, coop.buyerMinimum]);
   }
 
   if (state.audience === "formation" && listsFormation(coop)) {
-    return `${location} / ${coop.formationStage || "Gathering interested people"} / ${coop.formationShareCost || coop.memberCost || "Share cost not listed"} / ${coop.foundingMemberTarget || "People needed not listed"}`;
+    return joinMetaParts([
+      location,
+      coop.formationStage || "Gathering interested people",
+      coop.formationShareCost || coop.memberCost,
+      coop.foundingMemberTarget,
+    ]);
   }
 
   if (state.audience === "all" && listsFormation(coop) && !listsForMembers(coop)) {
-    return `${location} / New energy community / ${coop.plannedAssets || "First project idea not listed"}`;
+    return joinMetaParts([location, "New energy community", coop.plannedAssets]);
   }
 
   if (state.audience === "all" && listsSurplus(coop) && !listsForMembers(coop)) {
-    return `${location} / Electricity buyers / ${coop.surplusRate || "Rate not listed"}`;
+    return joinMetaParts([location, "Electricity buyers", coop.surplusRate]);
   }
 
   if (!listsForMembers(coop)) {
-    return `${location} / Profile only / ${Number(coop.capacity || 0).toFixed(1)} MW owned capacity`;
+    const capacityText = formatCapacity(coop.capacity);
+    return joinMetaParts([location, "Profile only", capacityText ? `${capacityText} owned capacity` : ""]);
   }
 
-  return `${location} / ${formatNumber.format(coop.members || 0)} members / ${coop.memberCost || "Joining cost not listed"} / ${coop.electricityCost || "Power price not listed"}`;
+  return joinMetaParts([
+    location,
+    coop.members ? `${formatNumber.format(coop.members)} members` : "",
+    coop.memberCost,
+    coop.electricityCost,
+  ]);
 }
 
 function handlePhotoUpload(event) {
