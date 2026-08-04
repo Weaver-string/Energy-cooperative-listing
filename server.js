@@ -202,11 +202,11 @@ const OFFICIAL_COOP_PROFILES = [
     intro:
       "Community-owned energy cooperative in Bristol developing local renewable energy projects and community benefit work.",
     members: 2000,
-    capacity: 0,
+    capacity: 12,
     listingGoals: ["members"],
     openMembers: true,
     status: "Open membership",
-    publicContact: "contact@bristolenergy.coop",
+    publicContact: "info@bristolenergy.coop",
     assets: [
       {
         type: "Solar",
@@ -301,7 +301,7 @@ const OFFICIAL_COOP_PROFILES = [
       {
         type: "Wind",
         detail: "Wind parks and turbines in Zeeland.",
-        value: "13 wind parks and 67 turbines",
+        value: "13 wind parks and 73 turbines",
       },
     ],
     memberCost: "EUR 10 registration fee; project loans from EUR 100 after six months",
