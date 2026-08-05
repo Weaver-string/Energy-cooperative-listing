@@ -259,7 +259,7 @@ const OFFICIAL_COOP_PROFILES = [
         value: "",
       },
     ],
-    memberCost: "",
+    memberCost: "Five EUR 100 cooperative shares for cooperative tariff",
     electricityCost: "",
     formationStage: "",
     foundingMemberTarget: "",
